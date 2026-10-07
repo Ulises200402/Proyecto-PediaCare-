@@ -1,67 +1,93 @@
+import { useEffect, useState } from 'react'
 import {
   ArrowRight,
-  CalendarDays,
   Eye,
+  EyeOff,
   HeartPulse,
   LockKeyhole,
   Mail,
-  Syringe,
 } from 'lucide-react'
+import AccessBrandPanel from './components/AccessBrandPanel.jsx'
+import AuthenticatedDashboard from './components/AuthenticatedDashboard.jsx'
+import RegisterPage from './components/RegisterPage.jsx'
+import { getCurrentUser, login } from './services/api.js'
 import './App.css'
 
-const careMoments = [
-  { icon: CalendarDays, label: 'Consultas', number: '01' },
-  { icon: Syringe, label: 'Vacunación', number: '02' },
-  { icon: HeartPulse, label: 'Seguimiento', number: '03' },
-]
-
 function App() {
+  const [session, setSession] = useState(null)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [isRestoringSession, setIsRestoringSession] = useState(
+    () => Boolean(sessionStorage.getItem('pediacare.token')),
+  )
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [passwordVisible, setPasswordVisible] = useState(false)
+  const [loginError, setLoginError] = useState('')
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('pediacare.token')
+    if (!token) return
+
+    getCurrentUser(token)
+      .then((user) => setSession({ token, user }))
+      .catch(() => sessionStorage.removeItem('pediacare.token'))
+      .finally(() => setIsRestoringSession(false))
+  }, [])
+
+  async function handleLogin(event) {
+    event.preventDefault()
+    setIsSubmitting(true)
+    setLoginError('')
+
+    try {
+      const result = await login({
+        email: event.currentTarget.email.value,
+        password: event.currentTarget.password.value,
+      })
+      sessionStorage.setItem('pediacare.token', result.token)
+      setSession({ token: result.token, user: result.user })
+    } catch (error) {
+      setLoginError(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('pediacare.token')
+    setSession(null)
+    setLoginError('')
+  }
+
+  if (isRestoringSession) {
+    return <main className="auth-loading" aria-label="Verificando sesión" />
+  }
+
+  if (session) {
+    return (
+      <AuthenticatedDashboard
+        key={session.user.id}
+        onLogout={handleLogout}
+        token={session.token}
+        user={session.user}
+      />
+    )
+  }
+
+  if (isRegistering) {
+    return (
+      <RegisterPage
+        onBackToLogin={() => setIsRegistering(false)}
+        onRegistered={(result) => {
+          sessionStorage.setItem('pediacare.token', result.token)
+          setSession({ token: result.token, user: result.user })
+        }}
+      />
+    )
+  }
+
   return (
     <main className="access-page">
-      <aside className="brand-panel" aria-label="PediaCare+">
-        <header className="brand-panel__header">
-          <a className="brand" href="/" aria-label="PediaCare+, inicio">
-            <span className="brand__mark" aria-hidden="true">
-              <HeartPulse size={22} strokeWidth={1.8} />
-            </span>
-            <span className="brand__name">
-              PediaCare<span>+</span>
-            </span>
-          </a>
-          <span className="brand-panel__edition">SALUD PEDIÁTRICA</span>
-        </header>
-
-        <div className="brand-panel__content">
-          <p className="eyebrow">
-            <span className="eyebrow__line" aria-hidden="true" />
-            GESTIÓN PEDIÁTRICA
-          </p>
-          <h1>Cada etapa, con su historia.</h1>
-          <p className="brand-panel__description">
-            Un espacio compartido para acompañar el crecimiento y el cuidado de
-            cada paciente.
-          </p>
-
-          <div className="care-path" aria-label="Áreas de seguimiento">
-            {careMoments.map(({ icon: Icon, label, number }) => (
-              <div className="care-path__item" key={number}>
-                <span className="care-path__icon" aria-hidden="true">
-                  <Icon size={18} strokeWidth={1.8} />
-                </span>
-                <span className="care-path__label">{label}</span>
-                <span className="care-path__number">{number}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <footer className="brand-panel__footer">
-          <span>Seguimiento pediátrico</span>
-          <span className="brand-panel__footer-mark" aria-hidden="true">
-            P+
-          </span>
-        </footer>
-      </aside>
+      <AccessBrandPanel />
 
       <section className="login-panel" aria-labelledby="login-title">
         <div className="login-panel__inner">
@@ -81,7 +107,7 @@ function App() {
             <p>Ingresá con tu cuenta personal.</p>
           </div>
 
-          <div className="login-form">
+          <form className="login-form" onSubmit={handleLogin}>
             <div className="field-group">
               <label htmlFor="email">Correo electrónico</label>
               <div className="input-shell">
@@ -92,6 +118,7 @@ function App() {
                   type="email"
                   autoComplete="email"
                   placeholder="nombre@correo.com"
+                  required
                 />
               </div>
             </div>
@@ -103,25 +130,36 @@ function App() {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={passwordVisible ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="Ingresá tu contraseña"
+                  required
                 />
-                <span className="password-indicator" aria-hidden="true">
-                  <Eye size={18} />
-                </span>
+                <button
+                  className="password-toggle"
+                  type="button"
+                  aria-label={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  onClick={() => setPasswordVisible((visible) => !visible)}
+                >
+                  {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
-            <button className="login-button" type="button">
-              <span>Ingresar</span>
+            {loginError && <p className="login-message" role="alert">{loginError}</p>}
+
+            <button className="login-button" type="submit" disabled={isSubmitting}>
+              <span>{isSubmitting ? 'Ingresando…' : 'Ingresar'}</span>
               <ArrowRight size={19} aria-hidden="true" />
             </button>
-          </div>
+          </form>
 
           <p className="login-panel__note">
             Cada adulto accede con su propia cuenta.
           </p>
+          <button className="access-switch" onClick={() => setIsRegistering(true)} type="button">
+            ¿Todavía no tenés cuenta? <span>Crear cuenta</span>
+          </button>
         </div>
 
         <footer className="login-panel__footer">

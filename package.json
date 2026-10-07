@@ -7,7 +7,9 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "npm --prefix backend run dev",
     "build": "npm --prefix frontend run build",
-    "lint": "npm --prefix frontend run lint"
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix backend test",
+    "user:create": "npm --prefix backend run user:create"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
