@@ -2,6 +2,8 @@ import {
   createPatientWithHistory,
   findPatientForUser,
   findPatientsForUser,
+  findTutors,
+  updatePatient,
 } from '../repositories/patient.repository.js'
 import { validateNewPatient } from '../validators/patient.validator.js'
 
@@ -42,6 +44,44 @@ export async function createPatient(request, response, next) {
   try {
     const patient = await createPatientWithHistory(validation.value)
     return response.status(201).json({ data: patient })
+  } catch (error) {
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      return response.status(400).json({
+        error: 'Los tutores deben ser cuentas existentes de padre/madre.',
+      })
+    }
+    return next(error)
+  }
+}
+
+export async function listTutors(request, response, next) {
+  try {
+    const tutors = await findTutors()
+    return response.json({ data: tutors })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export async function editPatient(request, response, next) {
+  const patientId = Number(request.params.patientId)
+  if (!Number.isSafeInteger(patientId) || patientId < 1) {
+    return response.status(400).json({ error: 'El identificador del paciente no es válido.' })
+  }
+
+  const validation = validateNewPatient(request.body)
+  if (validation.errors) {
+    return response.status(400).json({
+      error: 'Los datos del paciente no son válidos.',
+      details: validation.errors,
+    })
+  }
+
+  try {
+    const patient = await updatePatient(patientId, validation.value)
+    if (!patient) return response.status(404).json({ error: 'Paciente no encontrado.' })
+
+    return response.json({ data: patient })
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return response.status(400).json({

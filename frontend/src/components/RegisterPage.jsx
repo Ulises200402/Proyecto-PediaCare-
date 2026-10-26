@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  HeartPulse,
   LockKeyhole,
   Mail,
   ShieldCheck,
@@ -71,7 +70,7 @@ export default function RegisterPage({ onBackToLogin, onRegistered }) {
         <div className="login-panel__inner register-panel__inner">
           <div className="login-panel__topline">
             <span className="login-panel__mobile-brand">
-              <span className="brand__mark" aria-hidden="true"><HeartPulse size={20} /></span>
+              <span className="brand__mark" aria-hidden="true"><img src="/LogoPC.png" alt="" /></span>
               PediaCare<span>+</span>
             </span>
             <span className="login-panel__context">CREACIÓN DE CUENTA</span>

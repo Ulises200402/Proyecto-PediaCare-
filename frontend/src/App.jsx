@@ -3,15 +3,42 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  HeartPulse,
   LockKeyhole,
   Mail,
+  Stethoscope,
+  Pill,
+  Users,
+  Sparkles,
 } from 'lucide-react'
 import AccessBrandPanel from './components/AccessBrandPanel.jsx'
 import AuthenticatedDashboard from './components/AuthenticatedDashboard.jsx'
 import RegisterPage from './components/RegisterPage.jsx'
 import { getCurrentUser, login } from './services/api.js'
 import './App.css'
+
+const demoUsers = {
+  MEDICO: {
+    id: 1,
+    name: 'Dra. Lucía Benítez',
+    email: 'lucia.benitez@pediacare.local',
+    role: 'MEDICO',
+    title: 'Médica Pediatra (HU 1, 2, 3)',
+  },
+  ENFERMERO: {
+    id: 2,
+    name: 'Enf. Lautaro Altamirano',
+    email: 'lautaro.altamirano@pediacare.local',
+    role: 'ENFERMERO',
+    title: 'Enfermería y Control (HU 5, 2, 3)',
+  },
+  PADRE_MADRE: {
+    id: 101,
+    name: 'Marina Torres',
+    email: 'marina.torres@correo.com',
+    role: 'PADRE_MADRE',
+    title: 'Madre / Familia (HU 4, 2)',
+  },
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -58,6 +85,14 @@ function App() {
     setLoginError('')
   }
 
+  function handleStartDemo(roleKey) {
+    setSession({
+      token: null,
+      user: demoUsers[roleKey],
+      isDemo: true,
+    })
+  }
+
   if (isRestoringSession) {
     return <main className="auth-loading" aria-label="Verificando sesión" />
   }
@@ -65,10 +100,18 @@ function App() {
   if (session) {
     return (
       <AuthenticatedDashboard
-        key={session.user.id}
+        key={session.user.id || session.user.role}
         onLogout={handleLogout}
         token={session.token}
         user={session.user}
+        isDemo={Boolean(session.isDemo)}
+        onChangeDemoRole={(newRole) => {
+          setSession({
+            token: null,
+            user: demoUsers[newRole],
+            isDemo: true,
+          })
+        }}
       />
     )
   }
@@ -94,7 +137,7 @@ function App() {
           <div className="login-panel__topline">
             <span className="login-panel__mobile-brand">
               <span className="brand__mark" aria-hidden="true">
-                <HeartPulse size={20} strokeWidth={1.8} />
+                <img src="/LogoPC.png" alt="" />
               </span>
               PediaCare<span>+</span>
             </span>
@@ -104,7 +147,68 @@ function App() {
           <div className="login-heading">
             <p className="login-heading__eyebrow">BIENVENIDO/A</p>
             <h2 id="login-title">Iniciar sesión</h2>
-            <p>Ingresá con tu cuenta personal.</p>
+            <p>Ingresá con tu cuenta personal o explorá las vistas del proyecto.</p>
+          </div>
+
+          {/* Selector Rápido para evaluación de las vistas del PDF */}
+          <div className="demo-access-box">
+            <div className="demo-access-header">
+              <Sparkles size={16} />
+              <span>EXPLORAR VISTAS DE USUARIOS (PDF MODELADO)</span>
+            </div>
+            <p className="demo-access-desc">
+              Hacé clic en cualquier rol para interactuar directamente con sus historias de usuario:
+            </p>
+            <div className="demo-access-buttons">
+              <button
+                type="button"
+                className="demo-role-card"
+                onClick={() => handleStartDemo('MEDICO')}
+              >
+                <div className="demo-role-card__icon">
+                  <Stethoscope size={18} />
+                </div>
+                <div>
+                  <strong>Médico</strong>
+                  <small>HU 1, 2, 3 · Consultas y Fichas</small>
+                </div>
+                <ArrowRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                className="demo-role-card"
+                onClick={() => handleStartDemo('ENFERMERO')}
+              >
+                <div className="demo-role-card__icon demo-role-card__icon--nurse">
+                  <Pill size={18} />
+                </div>
+                <div>
+                  <strong>Enfermería</strong>
+                  <small>HU 5, 2, 3 · Medicación y Alertas</small>
+                </div>
+                <ArrowRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                className="demo-role-card"
+                onClick={() => handleStartDemo('PADRE_MADRE')}
+              >
+                <div className="demo-role-card__icon demo-role-card__icon--family">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <strong>Padre / Madre</strong>
+                  <small>HU 4, 2 · Turnos y Notificaciones</small>
+                </div>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div className="login-divider">
+            <span>O INGRESAR CON CREDENCIALES</span>
           </div>
 
           <form className="login-form" onSubmit={handleLogin}>
@@ -163,8 +267,8 @@ function App() {
         </div>
 
         <footer className="login-panel__footer">
-          <span>© 2026 PediaCare+</span>
-          <span>Atención pediátrica</span>
+          <span>© 2026 PediaCare+ · Proyecto Modelado de Software</span>
+          <span>Atención pediátrica integral</span>
         </footer>
       </section>
     </main>

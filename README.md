@@ -70,33 +70,27 @@ El frontend y el backend son paquetes independientes y mantienen sus propias dep
 Desde PowerShell, en la carpeta raíz del repositorio:
 
 ```powershell
+# 1. Instalar dependencias del workspace, frontend y backend
 npm install
 npm --prefix frontend install
 npm --prefix backend install
+
+# 2. Configurar las variables de entorno de la base de datos
+Copy-Item backend/.env.example backend/.env
+```
+
+Editar `backend/.env` con las credenciales de tu servidor MySQL local (`DB_USER`, `DB_PASSWORD`, etc.). El puerto de la API está configurado por defecto en `PORT=3001` para evitar conflictos con otros servicios locales.
+
+```powershell
+# 3. Inicializar la base de datos ejecutando el script SQL
+# (puedes usar MySQL Workbench, la CLI de mysql o tu cliente preferido)
+# mysql -u root -p < db/pedia_care.sql
+
+# 4. Iniciar la aplicación completa (Frontend + Backend en paralelo)
 npm run dev
 ```
 
-`npm run dev` inicia el frontend y el backend en paralelo. Vite muestra su URL en la terminal, normalmente `http://localhost:5173`; si ese puerto está ocupado, selecciona otro. La API queda disponible en `http://localhost:3000`.
-
-### Crear y configurar MySQL
-
-1. Instalar e iniciar MySQL Server si todavía no está disponible.
-2. Desde la raíz, crear el archivo de configuración local y editarlo con las credenciales propias:
-
-	```powershell
-	Copy-Item backend/.env.example backend/.env
-	```
-
-	Reemplazar `JWT_SECRET` por un valor aleatorio de al menos 32 caracteres. En PowerShell se puede generar con:
-
-	```powershell
-	node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-	```
-
-	Definir también códigos privados distintos en `MEDICO_REGISTRATION_CODE` y `ENFERMERO_REGISTRATION_CODE`. Se solicitan en el registro para evitar que cualquiera se atribuya un rol clínico.
-
-3. Ejecutar `db/pedia_care.sql` con MySQL Workbench o desde un cliente MySQL. El script crea la base si no existe y **no elimina** bases existentes.
-4. Iniciar el proyecto y comprobar `http://localhost:3000/api/health/database`.
+`npm run dev` inicia el frontend (en `http://localhost:5173` con proxy automático hacia la API) y el backend (en `http://localhost:3001`) en paralelo.
 
 Durante desarrollo, si falta `JWT_SECRET`, se usa una clave temporal en memoria que cambia al reiniciar la API. En producción es obligatorio configurar una clave persistente.
 

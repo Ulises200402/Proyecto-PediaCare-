@@ -12,7 +12,7 @@ export default function AccessBrandPanel() {
       <header className="brand-panel__header">
         <a className="brand" href="/" aria-label="PediaCare+, inicio">
           <span className="brand__mark" aria-hidden="true">
-            <HeartPulse size={22} strokeWidth={1.8} />
+            <img src="/LogoPC.png" alt="" />
           </span>
           <span className="brand__name">PediaCare<span>+</span></span>
         </a>

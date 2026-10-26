@@ -10,8 +10,16 @@ const patientSelect = `
     p.enfermedades_cronicas AS enfermedadesCronicas,
     p.id_tutor_1 AS idTutor1,
     p.id_tutor_2 AS idTutor2,
-    p.fecha_alta AS fechaAlta
-  FROM paciente AS p`
+    p.fecha_alta AS fechaAlta,
+    t1.nombre AS tutor1Nombre,
+    t1p.telefono AS tutor1Telefono,
+    t2.nombre AS tutor2Nombre,
+    t2p.telefono AS tutor2Telefono
+  FROM paciente AS p
+  LEFT JOIN usuario AS t1 ON t1.id_usuario = p.id_tutor_1
+  LEFT JOIN padre_madre AS t1p ON t1p.id_usuario = p.id_tutor_1
+  LEFT JOIN usuario AS t2 ON t2.id_usuario = p.id_tutor_2
+  LEFT JOIN padre_madre AS t2p ON t2p.id_usuario = p.id_tutor_2`
 
 export async function findPatientsForUser(user) {
   if (user.role === 'PADRE_MADRE') {
@@ -89,4 +97,49 @@ export async function createPatientWithHistory(patient) {
   } finally {
     connection.release()
   }
+}
+
+export async function findTutors() {
+  const [rows] = await pool.execute(
+    `SELECT
+       pm.id_usuario AS id,
+       u.nombre,
+       pm.telefono
+     FROM padre_madre AS pm
+     INNER JOIN usuario AS u ON u.id_usuario = pm.id_usuario
+     ORDER BY u.nombre`,
+  )
+  return rows
+}
+
+export async function updatePatient(patientId, patient) {
+  const [result] = await pool.execute(
+    `UPDATE paciente SET
+       nombre = ?,
+       fecha_nacimiento = ?,
+       sexo = ?,
+       alergias = ?,
+       enfermedades_cronicas = ?,
+       id_tutor_1 = ?,
+       id_tutor_2 = ?
+     WHERE id_paciente = ?`,
+    [
+      patient.nombre,
+      patient.fechaNacimiento,
+      patient.sexo,
+      patient.alergias,
+      patient.enfermedadesCronicas,
+      patient.idTutor1,
+      patient.idTutor2,
+      patientId,
+    ],
+  )
+
+  if (result.affectedRows === 0) return null
+
+  const [rows] = await pool.execute(
+    `${patientSelect} WHERE p.id_paciente = ? LIMIT 1`,
+    [patientId],
+  )
+  return rows[0] ?? null
 }

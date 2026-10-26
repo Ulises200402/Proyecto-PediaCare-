@@ -68,7 +68,7 @@ function Brand() {
   return (
     <span className="brand dashboard-brand">
       <span className="brand__mark" aria-hidden="true">
-        <HeartPulse size={21} strokeWidth={1.8} />
+        <img src="/LogoPC.png" alt="" />
       </span>
       <span className="brand__name">
         PediaCare<span>+</span>
