@@ -34,6 +34,7 @@ const demoUsers = {
   PADRE_MADRE: {
     id: 101,
     name: 'Marina Torres',
+    dni: '91000001',
     email: 'marina.torres@correo.com',
     role: 'PADRE_MADRE',
     title: 'Madre / Familia (HU 4, 2)',
@@ -56,7 +57,10 @@ function App() {
 
     getCurrentUser(token)
       .then((user) => setSession({ token, user }))
-      .catch(() => sessionStorage.removeItem('pediacare.token'))
+      .catch((error) => {
+        if (error.status === 401) sessionStorage.removeItem('pediacare.token')
+        else setLoginError(error.message)
+      })
       .finally(() => setIsRestoringSession(false))
   }, [])
 

@@ -11,34 +11,58 @@ import {
 export default function FamilyAppointmentsView({
   appointments,
   childrenPatients,
+  doctors = [],
   onBookAppointment,
   onCancelAppointment,
+  readOnly = false,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedChildId, setSelectedChildId] = useState(childrenPatients[0]?.id || '')
-  const [especialidad, setEspecialidad] = useState('Pediatría General')
-  const [fecha, setFecha] = useState('2026-11-05')
+  const [selectedDoctorId, setSelectedDoctorId] = useState(String(doctors[0]?.id || ''))
+  const [fecha, setFecha] = useState(() => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+  })
   const [hora, setHora] = useState('10:00')
   const [motivo, setMotivo] = useState('')
+  const [formError, setFormError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
-  function handleSubmit(e) {
+  const activeChildId = selectedChildId || String(childrenPatients[0]?.id || '')
+  const activeDoctorId = selectedDoctorId || String(doctors[0]?.id || '')
+  const doctor = doctors.find((item) => item.id === Number(activeDoctorId))
+
+  async function handleSubmit(e) {
     e.preventDefault()
-    const child = childrenPatients.find((c) => c.id === Number(selectedChildId)) || childrenPatients[0]
+    setFormError('')
+    const child = childrenPatients.find((c) => c.id === Number(activeChildId)) || childrenPatients[0]
+    if (!child || !doctor) {
+      setFormError('No hay paciente o profesional disponible para solicitar el turno.')
+      return
+    }
 
     const newAppointment = {
       id: Date.now(),
       idPaciente: child.id,
       pacienteNombre: child.nombre,
-      idMedico: 1,
-      medicoNombre: 'Dra. Lucía Benítez',
-      especialidad,
-      fechaHora: `${fecha}T${hora}:00`,
-      consultorio: 'Consultorio 3 - Pediatría',
+      pacienteDni: child.dni,
+      idMedico: doctor.id,
+      medicoNombre: doctor.nombre,
+      especialidad: doctor.especialidad,
+      fechaHora: `${fecha}T${hora}`,
+      consultorio: 'A confirmar',
       motivo,
       estado: 'Programado',
     }
 
-    onBookAppointment(newAppointment)
+    setIsSaving(true)
+    const result = await onBookAppointment(newAppointment)
+    setIsSaving(false)
+    if (!result?.ok) {
+      setFormError(result?.error || 'No se pudo solicitar el turno.')
+      return
+    }
     setIsModalOpen(false)
     setMotivo('')
   }
@@ -49,16 +73,19 @@ export default function FamilyAppointmentsView({
         <div>
           <span className="section-kicker">GESTIÓN DE TURNOS</span>
           <h2>Turnos de mis Hijos ({appointments.length})</h2>
-          <p>Consultá y agendá visitas médicas pediátricas.</p>
+          <p>Solicitá una fecha y profesional; el turno quedará pendiente de confirmación.</p>
         </div>
-        <button
-          type="button"
-          className="action-btn action-btn--primary"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus size={16} />
-          <span>Solicitar Turno</span>
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            className="action-btn action-btn--primary"
+            onClick={() => setIsModalOpen(true)}
+            disabled={!childrenPatients.length || !doctors.length}
+          >
+            <Plus size={16} />
+            <span>Solicitar Turno</span>
+          </button>
+        )}
       </div>
 
       <div className="appointments-list-cards">
@@ -67,18 +94,22 @@ export default function FamilyAppointmentsView({
             <CalendarDays size={32} />
             <h3>No tenés turnos registrados</h3>
             <p>Podés solicitar un nuevo turno para tu hijo/a cuando lo necesites.</p>
-            <button
-              type="button"
-              className="action-btn action-btn--primary"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <Plus size={16} /> Solicitar Turno Ahora
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="action-btn action-btn--primary"
+                onClick={() => setIsModalOpen(true)}
+                disabled={!childrenPatients.length || !doctors.length}
+              >
+                <Plus size={16} /> Solicitar Turno Ahora
+              </button>
+            )}
           </div>
         ) : (
           appointments.map((app) => {
             const isAttended = app.estado === 'Atendido'
             const isCancelled = app.estado === 'Cancelado'
+            const child = childrenPatients.find((patient) => patient.id === app.idPaciente)
 
             return (
               <article className="family-appointment-card" key={app.id}>
@@ -114,12 +145,14 @@ export default function FamilyAppointmentsView({
                         minute: '2-digit',
                       })} hs
                     </span>
-                    <span>Paciente: <strong>{app.pacienteNombre}</strong></span>
+                    <span>
+                      Paciente: <strong>{app.pacienteNombre}</strong> · DNI {app.pacienteDni || child?.dni || 'pendiente'}
+                    </span>
                     <span>{app.consultorio}</span>
                   </div>
                 </div>
 
-                {!isAttended && !isCancelled && (
+                {!readOnly && !isAttended && !isCancelled && (
                   <div className="family-app-actions">
                     <button
                       type="button"
@@ -139,7 +172,7 @@ export default function FamilyAppointmentsView({
       </div>
 
       {/* Modal Solicitar Turno */}
-      {isModalOpen && (
+      {!readOnly && isModalOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <header className="modal-header">
@@ -160,13 +193,13 @@ export default function FamilyAppointmentsView({
               <label>
                 <span>Hijo/a para el turno *</span>
                 <select
-                  value={selectedChildId}
+                  value={activeChildId}
                   onChange={(e) => setSelectedChildId(e.target.value)}
                   required
                 >
                   {childrenPatients.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.nombre} ({c.edad})
+                      {c.dni || 'DNI pendiente'} · {c.nombre} ({c.edad})
                     </option>
                   ))}
                 </select>
@@ -175,14 +208,15 @@ export default function FamilyAppointmentsView({
               <label>
                 <span>Especialidad o Profesional *</span>
                 <select
-                  value={especialidad}
-                  onChange={(e) => setEspecialidad(e.target.value)}
+                  value={activeDoctorId}
+                  onChange={(e) => setSelectedDoctorId(e.target.value)}
                   required
                 >
-                  <option value="Pediatría General">Pediatría General (Dra. Lucía Benítez)</option>
-                  <option value="Control de Crecimiento y Vacunación">Control de Crecimiento y Vacunación</option>
-                  <option value="Neumonología Pediátrica">Neumonología Pediátrica</option>
-                  <option value="Dermatología Infantil">Dermatología Infantil</option>
+                  {doctors.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.especialidad} ({item.nombre})
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -221,6 +255,8 @@ export default function FamilyAppointmentsView({
                 />
               </label>
 
+              {formError && <p className="form-error" role="alert">{formError}</p>}
+
               <footer className="modal-footer">
                 <button
                   type="button"
@@ -229,8 +265,8 @@ export default function FamilyAppointmentsView({
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="action-btn action-btn--primary">
-                  Confirmar Solicitud de Turno
+                <button type="submit" className="action-btn action-btn--primary" disabled={isSaving}>
+                  {isSaving ? 'Enviando…' : 'Solicitar turno'}
                 </button>
               </footer>
             </form>

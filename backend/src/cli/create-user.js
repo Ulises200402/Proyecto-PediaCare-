@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { pool } from '../config/database.js'
+import { isValidDni, normalizeDni } from '../validators/dni.validator.js'
 
 const roles = new Set(['MEDICO', 'ENFERMERO', 'PADRE_MADRE'])
 
@@ -61,6 +62,7 @@ function requireAnswer(value, label) {
 
 async function createUser() {
   const name = requireAnswer(await promptInput('Nombre completo: '), 'Nombre')
+  const dni = normalizeDni(requireAnswer(await promptInput('DNI (7 u 8 dígitos): '), 'DNI'))
   const email = requireAnswer(await promptInput('Correo electrónico: '), 'Correo')
     .toLowerCase()
   const role = requireAnswer(
@@ -69,6 +71,7 @@ async function createUser() {
   ).toUpperCase()
 
   if (name.length > 100) throw new Error('El nombre admite hasta 100 caracteres.')
+  if (!isValidDni(dni)) throw new Error('El DNI debe contener 7 u 8 dígitos.')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     throw new Error('El correo electrónico no es válido.')
   }
@@ -108,8 +111,8 @@ async function createUser() {
     transactionStarted = true
 
     const [result] = await connection.execute(
-      'INSERT INTO usuario (nombre, email, contrasena_hash, rol) VALUES (?, ?, ?, ?)',
-      [name, email, passwordHash, role],
+      'INSERT INTO usuario (nombre, dni, email, contrasena_hash, rol) VALUES (?, ?, ?, ?, ?)',
+      [name, dni, email, passwordHash, role],
     )
     const userId = result.insertId
 
@@ -136,7 +139,7 @@ async function createUser() {
   } catch (error) {
     if (transactionStarted) await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
-      throw new Error('Ya existe una cuenta con ese correo o matrícula.')
+      throw new Error('Ya existe una cuenta con ese correo, DNI o matrícula.')
     }
     throw error
   } finally {

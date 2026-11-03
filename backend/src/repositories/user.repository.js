@@ -18,8 +18,8 @@ export async function createUserWithProfile(account) {
   try {
     await connection.beginTransaction()
     const [result] = await connection.execute(
-      'INSERT INTO usuario (nombre, email, contrasena_hash, rol) VALUES (?, ?, ?, ?)',
-      [account.nombre, account.email, account.contrasenaHash, account.rol],
+      'INSERT INTO usuario (nombre, dni, email, contrasena_hash, rol) VALUES (?, ?, ?, ?, ?)',
+      [account.nombre, account.dni, account.email, account.contrasenaHash, account.rol],
     )
     const userId = result.insertId
 
@@ -55,6 +55,7 @@ export async function findUserByEmail(email) {
     `SELECT
        u.id_usuario,
        u.nombre,
+       u.dni,
        u.email,
        u.contrasena_hash,
        u.rol,
@@ -74,6 +75,7 @@ export async function findUserById(id) {
     `SELECT
        u.id_usuario,
        u.nombre,
+       u.dni,
        u.email,
        u.rol,
        ${activeProfile} AS activo

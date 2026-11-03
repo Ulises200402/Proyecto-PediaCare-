@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -16,15 +16,33 @@ import {
 } from 'lucide-react'
 import {
   createConsultation,
+  createMedication,
   createPatient,
+  createVaccine,
+  assignReminder,
   deleteConsultation,
+  deleteVaccine,
+  cancelAppointment,
+  getAppointmentDoctors,
   getAppointments,
   getConsultations,
+  getDoctorMetrics,
+  getMedications,
+  getNurses,
+  getNotifications,
+  getNotificationPreferences,
   getPatients,
-  getTutors,
+  getReminders,
+  getVaccines,
+  markNotificationRead,
+  requestAppointment,
   updateAppointmentStatus,
+  updateMedication,
   updateConsultation,
+  updateReminderStatus,
   updatePatient,
+  updateNotificationPreferences,
+  updateVaccine,
 } from '../services/api.js'
 
 // Import de vistas modulares según Principios de Diseño (Descomposición y Cohesión)
@@ -37,6 +55,7 @@ import DoctorMetricsView from './doctor/DoctorMetricsView.jsx'
 import NurseMedicationView from './nurse/NurseMedicationView.jsx'
 import NurseRemindersView from './nurse/NurseRemindersView.jsx'
 import NurseAdministrationsView from './nurse/NurseAdministrationsView.jsx'
+import NurseVaccinesView from './nurse/NurseVaccinesView.jsx'
 
 import FamilyOverviewView from './family/FamilyOverviewView.jsx'
 import FamilyChildrenView from './family/FamilyChildrenView.jsx'
@@ -68,6 +87,7 @@ const roleProfiles = {
       { icon: UsersRound, label: 'Pacientes' },
       { icon: CalendarDays, label: 'Agenda' },
       { icon: ClipboardList, label: 'Consultas' },
+      { icon: Clock3, label: 'Recordatorios' },
       { icon: Activity, label: 'Indicadores' },
     ],
   },
@@ -83,6 +103,7 @@ const roleProfiles = {
       { icon: Clock3, label: 'Recordatorios' },
       { icon: UsersRound, label: 'Pacientes' },
       { icon: ClipboardList, label: 'Administraciones' },
+      { icon: ShieldAlert, label: 'Vacunas' },
     ],
   },
   PADRE_MADRE: {
@@ -101,12 +122,22 @@ const roleProfiles = {
   },
 }
 
+const demoNurses = [
+  { id: 2, nombre: 'Lautaro Altamirano' },
+  { id: 3, nombre: 'Sofía Herrera' },
+  { id: 4, nombre: 'Camila Ríos' },
+]
+
 function getInitials(name = '') {
   return name
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
+}
+
+function getLocalDateString(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 export default function AuthenticatedDashboard({
@@ -120,6 +151,7 @@ export default function AuthenticatedDashboard({
   const profile = roleProfiles[currentRole] || roleProfiles.MEDICO
 
   const [activeTab, setActiveTab] = useState('Resumen')
+  const [actionError, setActionError] = useState('')
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false)
   const [emergencyTargetPatientId, setEmergencyTargetPatientId] = useState(null)
 
@@ -129,7 +161,18 @@ export default function AuthenticatedDashboard({
   const [patients, setPatients] = useState(isDemo ? initialPatients : [])
   const [consultations, setConsultations] = useState(isDemo ? initialConsultations : [])
   const [medications, setMedications] = useState(isDemo ? initialMedications : [])
-  const [reminders, setReminders] = useState(isDemo ? initialReminders : [])
+  const [reminders, setReminders] = useState(() => (
+    isDemo
+      ? initialReminders.map((reminder, index) => {
+          const nurse = demoNurses[index % demoNurses.length]
+          return {
+            ...reminder,
+            idEnfermeroAsignado: nurse.id,
+            enfermeroAsignado: nurse.nombre,
+          }
+        })
+      : []
+  ))
 
   const [appointments, setAppointments] = useState(() => {
     if (!isDemo) return []
@@ -141,7 +184,7 @@ export default function AuthenticatedDashboard({
     }
   })
 
-  const [vaccines] = useState(isDemo ? initialVaccines : [])
+  const [vaccines, setVaccines] = useState(isDemo ? initialVaccines : [])
 
   const [notifications, setNotifications] = useState(() => {
     if (!isDemo) return []
@@ -164,26 +207,65 @@ export default function AuthenticatedDashboard({
   })
 
   const [selectedPatientForHistory, setSelectedPatientForHistory] = useState(null)
-  const [tutors, setTutors] = useState([])
+  const [nurses, setNurses] = useState(isDemo ? demoNurses : [])
+  const [doctors, setDoctors] = useState(isDemo
+    ? [{ id: 1, nombre: 'Dra. Lucía Benítez', especialidad: 'Pediatría general' }]
+    : [])
+  const [doctorMetrics, setDoctorMetrics] = useState(null)
+  const demoTutors = useMemo(() => {
+    const tutorsById = new Map()
+    for (const patient of patients) {
+      for (const tutor of [
+        {
+          id: patient.idTutor1,
+          nombre: patient.tutor1Nombre,
+          dni: patient.tutor1Dni,
+          telefono: patient.tutor1Telefono,
+        },
+        {
+          id: patient.idTutor2,
+          nombre: patient.tutor2Nombre,
+          dni: patient.tutor2Dni,
+          telefono: patient.tutor2Telefono,
+        },
+      ]) {
+        if (tutor.id && tutor.nombre) tutorsById.set(tutor.id, tutor)
+      }
+    }
+    return [...tutorsById.values()]
+  }, [patients])
+
+  function reportError(error) {
+    setActionError(error?.message || 'No se pudo completar la operación. Intentá nuevamente.')
+  }
 
   // Guardar en localStorage ante cambios
   useEffect(() => {
+    if (!isDemo) return
     try {
       localStorage.setItem(`${storagePrefix}_appointments`, JSON.stringify(appointments))
-    } catch {}
-  }, [appointments, storagePrefix])
+    } catch (error) {
+      console.error('No se pudieron guardar los turnos de demostración.', error)
+    }
+  }, [appointments, storagePrefix, isDemo])
 
   useEffect(() => {
+    if (!isDemo) return
     try {
       localStorage.setItem(`${storagePrefix}_notifications`, JSON.stringify(notifications))
-    } catch {}
-  }, [notifications, storagePrefix])
+    } catch (error) {
+      console.error('No se pudieron guardar las notificaciones de demostración.', error)
+    }
+  }, [notifications, storagePrefix, isDemo])
 
   useEffect(() => {
+    if (!isDemo) return
     try {
       localStorage.setItem(`${storagePrefix}_notif_settings`, JSON.stringify(notificationSettings))
-    } catch {}
-  }, [notificationSettings, storagePrefix])
+    } catch (error) {
+      console.error('No se pudieron guardar las preferencias de demostración.', error)
+    }
+  }, [notificationSettings, storagePrefix, isDemo])
 
   // Cargar pacientes de la base de datos MySQL si hay token real
   useEffect(() => {
@@ -199,21 +281,19 @@ export default function AuthenticatedDashboard({
           return {
             ...p,
             edad: p.edad || age,
-            grupoSanguineo: p.grupoSanguineo || '0+',
+            grupoSanguineo: p.grupoSanguineo || null,
             tutor1Nombre: p.tutor1Nombre || 'Tutor Responsable',
             tutor1Telefono: p.tutor1Telefono || 'Sin teléfono',
             tutor2Nombre: p.tutor2Nombre || null,
             tutor2Telefono: p.tutor2Telefono || null,
-            pediatraCabecera: p.pediatraCabecera || 'Dra. Lucía Benítez',
-            estadoGeneral: p.estadoGeneral || 'Seguimiento al día',
+            pediatraCabecera: p.pediatraCabecera || null,
+            estadoGeneral: p.estadoGeneral || null,
           }
         })
 
         setPatients(enrichedData)
       })
-      .catch(() => {
-        // En caso de fallo de red o backend inactivo, mantiene el estado actual
-      })
+      .catch(reportError)
 
     return () => {
       isCurrent = false
@@ -225,27 +305,16 @@ export default function AuthenticatedDashboard({
     if (!token || isDemo) return
     getConsultations(token)
       .then(({ data }) => {
-        if (data) setConsultations(data)
+        if (data) {
+          setConsultations(data.map((consultation) => ({
+            ...consultation,
+            esHoy: String(consultation.fechaConsulta).slice(0, 10) === getLocalDateString(),
+          })))
+        }
       })
-      .catch(() => {})
+      .catch(reportError)
   }, [token, isDemo])
 
-  // Cargar tutores (padre/madre) desde la BD para selección en formularios
-  useEffect(() => {
-    if (!token || currentRole !== 'MEDICO') return
-    let isCurrent = true
-
-    getTutors(token)
-      .then(({ data }) => {
-        if (!isCurrent || !data) return
-        setTutors(data)
-      })
-      .catch(() => {})
-
-    return () => {
-      isCurrent = false
-    }
-  }, [token, currentRole])
   useEffect(() => {
     if (!token || isDemo) return
     getAppointments(token)
@@ -253,14 +322,119 @@ export default function AuthenticatedDashboard({
         if (data) {
           const formatted = data.map((app) => ({
             ...app,
-            esHoy: new Date(app.fechaHora).toDateString() === new Date().toDateString(),
-            consultorio: 'Consultorio 1',
+            esHoy: String(app.fechaHora).slice(0, 10) === getLocalDateString(),
+            consultorio: app.consultorio || 'A confirmar',
           }))
           setAppointments(formatted)
         }
       })
-      .catch(() => {})
+      .catch(reportError)
   }, [token, isDemo])
+
+  // Cargar notificaciones de la base de datos si hay token real
+  useEffect(() => {
+    if (!token || isDemo) return
+    getNotifications(token)
+      .then(({ data }) => {
+        if (data) setNotifications(data)
+      })
+      .catch(reportError)
+  }, [token, isDemo])
+
+  useEffect(() => {
+    if (!token || isDemo) return
+    getMedications(token)
+      .then(({ data }) => setMedications(data || []))
+      .catch(reportError)
+  }, [token, isDemo])
+
+  useEffect(() => {
+    if (!token || isDemo || !['ENFERMERO', 'MEDICO'].includes(currentRole)) return
+    getReminders(token)
+      .then(({ data }) => {
+        const now = new Date()
+        setReminders((data || []).map((reminder) => {
+          const date = new Date(String(reminder.fechaHoraProgramada).replace(' ', 'T'))
+          return {
+            ...reminder,
+            esAlertaUrgente: reminder.estado === 'Pendiente' &&
+              date.toDateString() === now.toDateString() &&
+              date.getTime() <= now.getTime() + 60 * 60 * 1000,
+          }
+        }))
+      })
+      .catch(reportError)
+  }, [token, isDemo, currentRole])
+
+  useEffect(() => {
+    if (!token || isDemo || !['ENFERMERO', 'MEDICO'].includes(currentRole)) return
+    getNurses(token)
+      .then(({ data }) => setNurses(data || []))
+      .catch(reportError)
+  }, [token, isDemo, currentRole])
+
+  useEffect(() => {
+    if (!token || isDemo || currentRole !== 'MEDICO') return
+    getDoctorMetrics(token)
+      .then(({ data }) => setDoctorMetrics(data))
+      .catch(reportError)
+  }, [token, isDemo, currentRole])
+
+  useEffect(() => {
+    if (!token || isDemo) return
+    getVaccines(token)
+      .then(({ data }) => setVaccines(data || []))
+      .catch(reportError)
+  }, [token, isDemo])
+
+  useEffect(() => {
+    if (!token || isDemo || currentRole !== 'PADRE_MADRE') return
+    getAppointmentDoctors(token)
+      .then(({ data }) => setDoctors(data || []))
+      .catch(reportError)
+  }, [token, isDemo, currentRole])
+
+  useEffect(() => {
+    if (!token || isDemo || currentRole !== 'PADRE_MADRE') return
+    getNotificationPreferences(token)
+      .then(({ data }) => setNotificationSettings(data))
+      .catch(reportError)
+  }, [token, isDemo, currentRole])
+
+  async function handleMarkNotificationAsRead(id) {
+    if (!token) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)))
+      return
+    }
+
+    try {
+      const { data } = await markNotificationRead(token, id)
+      if (data) {
+        setNotifications((prev) => prev.map((n) => (n.id === data.id ? data : n)))
+      }
+    } catch (error) {
+      reportError(error)
+    }
+  }
+
+  async function handleUpdateNotificationSettings(settings) {
+    if (!token) {
+      setNotificationSettings(settings)
+      return true
+    }
+    try {
+      const { data } = await updateNotificationPreferences(token, {
+        canales: { app: settings.canales.app },
+        tipos: settings.tipos,
+      })
+      setNotificationSettings(data)
+      setActionError('')
+      return true
+    } catch (error) {
+      reportError(error)
+      return false
+    }
+  }
 
   // Handlers para HU 1: Consultas y Turnos reales
   async function handleAddConsultation(newConsultation) {
@@ -276,15 +450,19 @@ export default function AuthenticatedDashboard({
         diagnostico: newConsultation.diagnostico,
         tratamiento: newConsultation.tratamiento,
         observaciones: newConsultation.observaciones,
+        indicacionesParaPadres: newConsultation.indicacionesParaPadres,
       })
-      setConsultations((prev) => [data, ...prev])
-    } catch {}
+      setConsultations((prev) => [{ ...data, esHoy: true }, ...prev])
+      setActionError('')
+    } catch (error) {
+      reportError(error)
+    }
   }
 
-  async function handleUpdateConsultation(updated) {
+  async function handleUpdateConsultation(updated, registrationCode) {
     if (!token) {
       setConsultations((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
-      return
+      return { ok: true }
     }
 
     try {
@@ -293,21 +471,32 @@ export default function AuthenticatedDashboard({
         diagnostico: updated.diagnostico,
         tratamiento: updated.tratamiento,
         observaciones: updated.observaciones,
-      })
+        indicacionesParaPadres: updated.indicacionesParaPadres,
+      }, registrationCode)
       setConsultations((prev) => prev.map((c) => (c.id === data.id ? data : c)))
-    } catch {}
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
   }
 
-  async function handleDeleteConsultation(id) {
+  async function handleDeleteConsultation(id, registrationCode) {
     if (!token) {
       setConsultations((prev) => prev.filter((c) => c.id !== id))
-      return
+      return { ok: true }
     }
 
     try {
-      await deleteConsultation(token, id)
+      await deleteConsultation(token, id, registrationCode)
       setConsultations((prev) => prev.filter((c) => c.id !== id))
-    } catch {}
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
   }
 
   async function handleUpdateAppointmentStatus(appointmentId, estado) {
@@ -321,9 +510,14 @@ export default function AuthenticatedDashboard({
     try {
       const { data } = await updateAppointmentStatus(token, appointmentId, estado)
       setAppointments((prev) =>
-        prev.map((app) => (app.id === data.id ? { ...data, esHoy: app.esHoy, consultorio: app.consultorio } : app))
+        prev.map((app) => (app.id === data.id
+          ? { ...app, ...data, esHoy: app.esHoy, consultorio: app.consultorio }
+          : app))
       )
-    } catch {}
+      setActionError('')
+    } catch (error) {
+      reportError(error)
+    }
   }
 
   // Handler para HU 1: Crear Paciente
@@ -337,6 +531,7 @@ export default function AuthenticatedDashboard({
     try {
       const { data } = await createPatient(token, {
         nombre: newPatient.nombre,
+        dni: newPatient.dni,
         fechaNacimiento: newPatient.fechaNacimiento,
         sexo: newPatient.sexo,
         idTutor1: Number(newPatient.idTutor1),
@@ -350,9 +545,9 @@ export default function AuthenticatedDashboard({
       const enriched = {
         ...data,
         edad: `${Math.max(0, new Date().getFullYear() - birthYear)} años`,
-        grupoSanguineo: data.grupoSanguineo || '0+',
-        pediatraCabecera: data.pediatraCabecera || 'Dra. Lucía Benítez',
-        estadoGeneral: data.estadoGeneral || 'Seguimiento al día',
+        grupoSanguineo: data.grupoSanguineo || null,
+        pediatraCabecera: data.pediatraCabecera || null,
+        estadoGeneral: data.estadoGeneral || null,
       }
       setPatients((prev) => [enriched, ...prev])
       return { ok: true, patient: enriched }
@@ -371,6 +566,7 @@ export default function AuthenticatedDashboard({
     try {
       const { data } = await updatePatient(token, updatedPatient.id, {
         nombre: updatedPatient.nombre,
+        dni: updatedPatient.dni,
         fechaNacimiento: updatedPatient.fechaNacimiento,
         sexo: updatedPatient.sexo,
         idTutor1: Number(updatedPatient.idTutor1),
@@ -384,9 +580,9 @@ export default function AuthenticatedDashboard({
       const enriched = {
         ...data,
         edad: `${Math.max(0, new Date().getFullYear() - birthYear)} años`,
-        grupoSanguineo: data.grupoSanguineo || '0+',
-        pediatraCabecera: data.pediatraCabecera || 'Dra. Lucía Benítez',
-        estadoGeneral: data.estadoGeneral || 'Seguimiento al día',
+        grupoSanguineo: data.grupoSanguineo || null,
+        pediatraCabecera: data.pediatraCabecera || null,
+        estadoGeneral: data.estadoGeneral || null,
       }
       setPatients((prev) => prev.map((p) => (p.id === enriched.id ? enriched : p)))
       return { ok: true, patient: enriched }
@@ -395,114 +591,239 @@ export default function AuthenticatedDashboard({
     }
   }
 
-  // Handler para HU 5: Cargar Medicación
-  function handleAddMedication(newMed) {
-    setMedications((prev) => [newMed, ...prev])
+  async function handleAddMedication(newMed) {
+    if (!token) {
+      setMedications((prev) => [newMed, ...prev])
+      setReminders((prev) => [
+        ...newMed.horarios.map((horario, idx) => ({
+          ...newMed,
+          id: Date.now() + idx,
+          horario,
+          estado: 'Pendiente',
+          fechaHoraAdministrada: null,
+          enfermero: null,
+          esAlertaUrgente: false,
+        })),
+        ...prev,
+      ])
+      return { ok: true }
+    }
 
-    // Generar recordatorios automáticos según horarios (HU 5)
-    const newReminders = newMed.horarios.map((horario, idx) => ({
-      id: Date.now() + idx,
-      idMedicacion: newMed.id,
-      idPaciente: newMed.idPaciente,
-      pacienteNombre: newMed.pacienteNombre,
-      medicamento: newMed.medicamento,
-      dosis: newMed.dosis,
-      horario,
-      estado: 'Pendiente',
-      fechaHoraAdministrada: null,
-      enfermero: null,
-      observaciones: newMed.indicaciones || 'Toma programada',
-      esAlertaUrgente: idx === 0, // La primera dosis queda activa con alerta
-    }))
-
-    setReminders((prev) => [...newReminders, ...prev])
+    try {
+      const { data } = await createMedication(token, {
+        idPaciente: Number(newMed.idPaciente),
+        medicamento: newMed.medicamento,
+        dosis: newMed.dosis,
+        via: newMed.via,
+        frecuencia: newMed.frecuencia,
+        horarios: newMed.horarios,
+        fechaInicio: newMed.fechaInicio,
+        fechaFin: newMed.fechaFin,
+        indicaciones: newMed.indicaciones,
+      })
+      setMedications((prev) => [data, ...prev])
+      const { data: updatedReminders } = await getReminders(token)
+      setReminders(updatedReminders || [])
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.details?.join(' ') || error.message }
+    }
   }
 
-  // Handler para HU 5: Administrar Dosis
-  function handleAdministerDose(reminderId) {
-    setReminders((prev) =>
-      prev.map((r) =>
-        r.id === reminderId
+  async function handleUpdateMedication(updatedMedication, registrationCode) {
+    if (!token) {
+      setMedications((prev) => prev.map((medication) => (
+        medication.id === updatedMedication.id ? updatedMedication : medication
+      )))
+      return { ok: true }
+    }
+    try {
+      const { data } = await updateMedication(token, updatedMedication.id, {
+        idPaciente: Number(updatedMedication.idPaciente),
+        medicamento: updatedMedication.medicamento,
+        dosis: updatedMedication.dosis,
+        via: updatedMedication.via,
+        frecuencia: updatedMedication.frecuencia,
+        horarios: updatedMedication.horarios,
+        fechaInicio: updatedMedication.fechaInicio,
+        fechaFin: updatedMedication.fechaFin,
+        indicaciones: updatedMedication.indicaciones,
+        activa: updatedMedication.activa,
+      }, registrationCode)
+      setMedications((prev) => prev.map((medication) => (
+        medication.id === data.id ? data : medication
+      )))
+      const { data: updatedReminders } = await getReminders(token)
+      setReminders(updatedReminders || [])
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.details?.join(' ') || error.message }
+    }
+  }
+
+  async function handleAdministerDose(reminderId) {
+    if (!token) {
+      setReminders((prev) => prev.map((reminder) => (
+        reminder.id === reminderId
           ? {
-              ...r,
+              ...reminder,
               estado: 'Administrada',
               fechaHoraAdministrada: new Date().toISOString(),
-              enfermero: 'Enf. Lautaro Altamirano',
               esAlertaUrgente: false,
             }
-          : r
-      )
-    )
-
-    // Enviar notificación a los padres ante administración (HU 4)
-    const rem = reminders.find((r) => r.id === reminderId)
-    if (rem) {
-      const notif = {
-        id: Date.now(),
-        idPaciente: rem.idPaciente,
-        pacienteNombre: rem.pacienteNombre,
-        titulo: 'Dosis de medicación administrada',
-        mensaje: `Se administró correctamente ${rem.medicamento} (${rem.dosis}) a las ${rem.horario} por enfermería.`,
-        tipo: 'medicacion',
-        canal: 'SMS',
-        leida: false,
-        fecha: 'Recién',
-      }
-      setNotifications((prev) => [notif, ...prev])
+          : reminder
+      )))
+      return { ok: true }
+    }
+    try {
+      const { data } = await updateReminderStatus(token, reminderId, 'Administrada')
+      setReminders((prev) => prev.map((reminder) => (
+        reminder.id === data.id ? { ...reminder, ...data, esAlertaUrgente: false } : reminder
+      )))
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
     }
   }
 
-  function handleOmitDose(reminderId, reason) {
-    setReminders((prev) =>
-      prev.map((r) =>
-        r.id === reminderId
+  async function handleOmitDose(reminderId, reason) {
+    if (!token) {
+      setReminders((prev) => prev.map((reminder) => (
+        reminder.id === reminderId
+          ? { ...reminder, estado: 'Omitida', observaciones: reason, esAlertaUrgente: false }
+          : reminder
+      )))
+      return { ok: true }
+    }
+    try {
+      const { data } = await updateReminderStatus(token, reminderId, 'Omitida', reason)
+      setReminders((prev) => prev.map((reminder) => (
+        reminder.id === data.id ? { ...reminder, ...data, esAlertaUrgente: false } : reminder
+      )))
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  async function handleAssignReminder(reminderId, assignedNurseId) {
+    if (!token) {
+      const nurse = nurses.find((item) => item.id === assignedNurseId)
+      setReminders((prev) => prev.map((reminder) => (
+        reminder.id === reminderId
           ? {
-              ...r,
-              estado: 'Omitida',
-              observaciones: `OMITIDA: ${reason}`,
-              esAlertaUrgente: false,
+              ...reminder,
+              idEnfermeroAsignado: assignedNurseId,
+              enfermeroAsignado: nurse?.nombre || 'Sin asignar',
             }
-          : r
-      )
-    )
-  }
-
-  // Handlers Turnos
-  function handleUpdateAppointmentStatus(id, newStatus) {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, estado: newStatus } : a))
-    )
-  }
-
-  function handleBookAppointment(newApp) {
-    setAppointments((prev) => [newApp, ...prev])
-
-    // Notificación automática a la familia (HU 4)
-    const notif = {
-      id: Date.now(),
-      idPaciente: newApp.idPaciente,
-      pacienteNombre: newApp.pacienteNombre,
-      titulo: 'Turno agendado con éxito',
-      mensaje: `Turno agendado para el ${new Date(newApp.fechaHora).toLocaleDateString('es-AR')} con ${newApp.medicoNombre} (${newApp.especialidad}).`,
-      tipo: 'turno',
-      canal: 'APP',
-      leida: false,
-      fecha: 'Recién',
+          : reminder
+      )))
+      return { ok: true }
     }
-    setNotifications((prev) => [notif, ...prev])
+    try {
+      const { data } = await assignReminder(token, reminderId, assignedNurseId)
+      setReminders((prev) => prev.map((reminder) => (
+        reminder.id === data.id ? { ...reminder, ...data } : reminder
+      )))
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
   }
 
-  function handleCancelAppointment(id) {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, estado: 'Cancelado' } : a))
-    )
+  async function handleCreateVaccine(vaccine) {
+    if (!token) {
+      const created = { ...vaccine, id: Date.now() }
+      setVaccines((prev) => [created, ...prev])
+      return { ok: true }
+    }
+    try {
+      const { data } = await createVaccine(token, vaccine)
+      setVaccines((prev) => [data, ...prev])
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.details?.join(' ') || error.message }
+    }
   }
 
-  // Handlers Notificaciones
-  function handleMarkNotificationAsRead(id) {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leida: true } : n))
-    )
+  async function handleUpdateVaccine(vaccine, registrationCode) {
+    if (!token) {
+      setVaccines((prev) => prev.map((item) => (item.id === vaccine.id ? vaccine : item)))
+      return { ok: true }
+    }
+    try {
+      const { data } = await updateVaccine(token, vaccine.id, vaccine, registrationCode)
+      setVaccines((prev) => prev.map((item) => (item.id === data.id ? data : item)))
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  async function handleDeleteVaccine(vaccineId, registrationCode) {
+    if (!token) {
+      setVaccines((prev) => prev.filter((item) => item.id !== vaccineId))
+      return { ok: true }
+    }
+    try {
+      await deleteVaccine(token, vaccineId, registrationCode)
+      setVaccines((prev) => prev.filter((item) => item.id !== vaccineId))
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  async function handleBookAppointment(newApp) {
+    if (!token) {
+      setAppointments((prev) => [newApp, ...prev])
+      return { ok: true }
+    }
+    try {
+      const { data } = await requestAppointment(token, newApp)
+      setAppointments((prev) => [{ ...data, consultorio: 'A confirmar' }, ...prev])
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  async function handleCancelAppointment(id) {
+    if (!token) {
+      setAppointments((prev) => prev.map((app) => (
+        app.id === id ? { ...app, estado: 'Cancelado' } : app
+      )))
+      return { ok: true }
+    }
+    try {
+      const { data } = await cancelAppointment(token, id)
+      setAppointments((prev) => prev.map((app) => (
+        app.id === id ? { ...app, ...data } : app
+      )))
+      setActionError('')
+      return { ok: true }
+    } catch (error) {
+      reportError(error)
+      return { ok: false, error: error.message }
+    }
   }
 
   function openEmergency(patientId = null) {
@@ -517,6 +838,33 @@ export default function AuthenticatedDashboard({
 
   // Consultas del día para el médico
   const todayConsultations = consultations.filter((c) => c.esHoy)
+  const criticalPatients = patients
+    .filter((patient) =>
+      [patient.alergias, patient.enfermedadesCronicas].some((value) =>
+        typeof value === 'string' && value.trim() && !/^(ninguna|sin\s)/i.test(value.trim())
+      )
+    )
+    .slice(0, 2)
+  const visibleNurseReminders = isDemo && currentRole === 'ENFERMERO'
+    ? reminders.filter((reminder) => (
+        reminder.idEnfermeroAsignado === user?.id || !reminder.idEnfermeroAsignado
+      ))
+    : reminders
+  const todayReminders = visibleNurseReminders.filter((reminder) =>
+    reminder.fechaHoraProgramada
+      ? String(reminder.fechaHoraProgramada).slice(0, 10) === getLocalDateString()
+      : isDemo,
+  )
+  const nextDoctorAppointment = appointments
+    .filter((appointment) =>
+      ['Programado', 'Confirmado'].includes(appointment.estado) &&
+      new Date(String(appointment.fechaHora).replace(' ', 'T')) >= new Date())
+    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))[0]
+  const todayLabel = new Intl.DateTimeFormat('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date())
 
   return (
     <div className="workspace">
@@ -540,7 +888,7 @@ export default function AuthenticatedDashboard({
             // Conteo de alertas pendientes
             let badgeCount = null
             if (currentRole === 'ENFERMERO' && label === 'Recordatorios') {
-              badgeCount = reminders.filter((r) => r.estado === 'Pendiente').length
+              badgeCount = visibleNurseReminders.filter((r) => r.estado === 'Pendiente').length
             } else if (currentRole === 'PADRE_MADRE' && label === 'Notificaciones') {
               const unread = notifications.filter((n) => !n.leida).length
               if (unread > 0) badgeCount = unread
@@ -672,8 +1020,20 @@ export default function AuthenticatedDashboard({
                   : `Sección interactiva de ${activeTab.toLowerCase()}.`}
               </p>
             </div>
-            <span className="workspace-date">Hoy, 21 de Octubre</span>
+            <span className="workspace-date">Hoy, {todayLabel}</span>
           </div>
+          <div className="prototype-notice" role="note">
+            <strong>{isDemo ? 'Modo demostración de solo lectura.' : 'Prototipo con datos ficticios.'}</strong>{' '}
+            {isDemo
+              ? 'Los datos son de muestra y no se pueden modificar.'
+              : 'No usar para atención clínica real ni cargar información personal o médica real.'}
+          </div>
+          {actionError && (
+            <div className="form-error" role="alert">
+              {actionError}
+              <button type="button" onClick={() => setActionError('')} aria-label="Cerrar aviso">×</button>
+            </div>
+          )}
 
           {/* ========================================================= */}
           {/* VISTAS PARA EL ROL: MÉDICO                                 */}
@@ -686,21 +1046,23 @@ export default function AuthenticatedDashboard({
                   <div className="metric-strip">
                     <div className="metric-item">
                       <span>CONSULTAS ESTE MES</span>
-                      <strong>86</strong>
+                      <strong>{doctorMetrics?.totalConsultasMes ?? consultations.length}</strong>
                       <small className="metric-item__positive">
-                        <Activity size={14} /> +12 consultas vs sep
+                        <Activity size={14} /> Consultas registradas este mes
                       </small>
                     </div>
                     <div className="metric-item">
                       <span>CONSULTAS DE HOY</span>
-                      <strong>{todayConsultations.length}</strong>
+                      <strong>{doctorMetrics?.consultasHoy ?? todayConsultations.length}</strong>
                       <small>
                         <CalendarDays size={14} /> En consultorio
                       </small>
                     </div>
                     <div className="metric-item">
                       <span>FICHAS CON ALERGIAS</span>
-                      <strong>03</strong>
+                      <strong>{patients.filter((patient) =>
+                        patient.alergias && !/^(ninguna|sin\s)/i.test(patient.alergias.trim())
+                      ).length}</strong>
                       <small className="metric-item__notice">
                         <ShieldAlert size={14} /> Revisar antes de medicar
                       </small>
@@ -776,31 +1138,25 @@ export default function AuthenticatedDashboard({
                         </div>
                         <p>Pacientes con antecedentes y alergias de riesgo.</p>
 
-                        <div
-                          className="attention-entry"
-                          onClick={() => openEmergency(1)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span className="attention-entry__dot" />
-                          <span>
-                            <strong>Sofía León</strong>
-                            <small>Alergia severa a Penicilina</small>
-                          </span>
-                          <ArrowRight size={15} />
-                        </div>
-
-                        <div
-                          className="attention-entry"
-                          onClick={() => openEmergency(2)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span className="attention-entry__dot attention-entry__dot--coral" />
-                          <span>
-                            <strong>Benjamín Molina</strong>
-                            <small>Alergia a Ibuprofeno · Asma bronquial</small>
-                          </span>
-                          <ArrowRight size={15} />
-                        </div>
+                        {criticalPatients.length ? criticalPatients.map((patient, index) => (
+                          <button
+                            type="button"
+                            className="attention-entry"
+                            key={patient.id}
+                            onClick={() => openEmergency(patient.id)}
+                          >
+                            <span className={`attention-entry__dot ${index ? 'attention-entry__dot--coral' : ''}`} />
+                            <span>
+                              <strong>{patient.nombre}</strong>
+                              <small>
+                                {[patient.alergias, patient.enfermedadesCronicas]
+                                  .filter((value) => value && !/^(ninguna|sin\s)/i.test(value.trim()))
+                                  .join(' · ')}
+                              </small>
+                            </span>
+                            <ArrowRight size={15} />
+                          </button>
+                        )) : <p>No hay antecedentes críticos registrados.</p>}
 
                         <button
                           type="button"
@@ -820,9 +1176,18 @@ export default function AuthenticatedDashboard({
                           </div>
                           <CalendarDays size={18} />
                         </div>
-                        <div className="agenda-panel__time">11:15</div>
-                        <strong>Benjamín Molina</strong>
-                        <p>Control respiratorio · Consultorio 3</p>
+                        {nextDoctorAppointment ? (
+                          <>
+                            <div className="agenda-panel__time">
+                              {new Date(nextDoctorAppointment.fechaHora).toLocaleTimeString('es-AR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                            <strong>{nextDoctorAppointment.pacienteNombre}</strong>
+                            <p>{nextDoctorAppointment.motivo} · {nextDoctorAppointment.estado}</p>
+                          </>
+                        ) : <p>No hay turnos pendientes.</p>}
                       </section>
                     </aside>
                   </div>
@@ -837,7 +1202,9 @@ export default function AuthenticatedDashboard({
                   onUpdatePatient={handleUpdatePatient}
                   onOpenEmergencyModal={openEmergency}
                   selectedPatientIdInitial={selectedPatientForHistory}
-                  tutors={tutors}
+                  token={token}
+                  demoTutors={demoTutors}
+                  readOnly={isDemo}
                 />
               )}
 
@@ -848,6 +1215,7 @@ export default function AuthenticatedDashboard({
                   onStartConsultation={(_app) => {
                     setActiveTab('Consultas')
                   }}
+                  readOnly={isDemo}
                 />
               )}
 
@@ -859,14 +1227,25 @@ export default function AuthenticatedDashboard({
                   onUpdateConsultation={handleUpdateConsultation}
                   onDeleteConsultation={handleDeleteConsultation}
                   onViewPatientHistory={navigateToPatientHistory}
+                  readOnly={isDemo}
+                />
+              )}
+
+              {activeTab === 'Recordatorios' && (
+                <NurseRemindersView
+                  reminders={visibleNurseReminders}
+                  patients={patients}
+                  nurses={nurses}
+                  canAdminister={false}
+                  canAssignReminders={!isDemo}
+                  onAssignReminder={handleAssignReminder}
                 />
               )}
 
               {activeTab === 'Indicadores' && (
                 <DoctorMetricsView
                   consultations={consultations}
-                  patients={patients}
-                  token={token}
+                  metrics={doctorMetrics}
                   isDemo={isDemo}
                 />
               )}
@@ -886,45 +1265,52 @@ export default function AuthenticatedDashboard({
                       <Clock3 size={21} />
                     </div>
                     <div>
-                      <strong>Turno Mañana · Control y Administración Farmacológica</strong>
+                      <strong>Control y administración de medicación</strong>
                       <span>
-                        Hay {reminders.filter((r) => r.estado === 'Pendiente').length} dosis
+                        Hay {todayReminders.filter((r) => r.estado === 'Pendiente').length} dosis
                         pendientes para el horario actual.
                       </span>
                     </div>
-                    <span className="nurse-summary-banner__date">TURNO MAÑANA</span>
+                    <span className="nurse-summary-banner__date">
+                      {new Date().getHours() < 12 ? 'TURNO MAÑANA' : new Date().getHours() < 19 ? 'TURNO TARDE' : 'TURNO NOCHE'}
+                    </span>
                   </div>
 
                   <div className="metric-strip metric-strip--nurse">
                     <div className="metric-item">
                       <span>DOSIS DE HOY</span>
-                      <strong>{reminders.length}</strong>
+                      <strong>{todayReminders.length}</strong>
                       <small>
-                        <Pill size={14} /> Total programadas
+                        <Pill size={14} /> Programadas para hoy
                       </small>
                     </div>
                     <div className="metric-item">
                       <span>ADMINISTRADAS</span>
-                      <strong>{reminders.filter((r) => r.estado === 'Administrada').length}</strong>
+                      <strong>{todayReminders.filter((r) => r.estado === 'Administrada').length}</strong>
                       <small className="metric-item__positive">Completadas con éxito</small>
                     </div>
                     <div className="metric-item">
                       <span>PENDIENTES</span>
-                      <strong>{reminders.filter((r) => r.estado === 'Pendiente').length}</strong>
+                      <strong>{todayReminders.filter((r) => r.estado === 'Pendiente').length}</strong>
                       <small className="metric-item__notice">
                         <Clock3 size={14} /> Próxima a aplicar
                       </small>
                     </div>
                     <div className="metric-item">
                       <span>PREVENCIÓN DE ERRORES</span>
-                      <strong>Activa</strong>
-                      <small className="metric-item__positive">5 correctos validados</small>
+                      <strong>{patients.length}</strong>
+                      <small className="metric-item__positive">Pacientes disponibles</small>
                     </div>
                   </div>
 
                   {/* Vista embebida de recordatorios y alertas del turno (HU 5) */}
                   <NurseRemindersView
-                    reminders={reminders}
+                    reminders={visibleNurseReminders}
+                    patients={patients}
+                    nurses={nurses}
+                    canAdminister={!isDemo}
+                    canAssignReminders={!isDemo}
+                    onAssignReminder={handleAssignReminder}
                     onAdministerDose={handleAdministerDose}
                     onOmitDose={handleOmitDose}
                     onOpenEmergencyModal={openEmergency}
@@ -937,13 +1323,20 @@ export default function AuthenticatedDashboard({
                   medications={medications}
                   patients={patients}
                   onAddMedication={handleAddMedication}
+                  onUpdateMedication={handleUpdateMedication}
                   onOpenEmergencyModal={openEmergency}
+                  readOnly={isDemo}
                 />
               )}
 
               {activeTab === 'Recordatorios' && (
                 <NurseRemindersView
-                  reminders={reminders}
+                  reminders={visibleNurseReminders}
+                  patients={patients}
+                  nurses={nurses}
+                  canAdminister={!isDemo}
+                  canAssignReminders={!isDemo}
+                  onAssignReminder={handleAssignReminder}
                   onAdministerDose={handleAdministerDose}
                   onOmitDose={handleOmitDose}
                   onOpenEmergencyModal={openEmergency}
@@ -958,12 +1351,26 @@ export default function AuthenticatedDashboard({
                   onUpdatePatient={handleUpdatePatient}
                   onOpenEmergencyModal={openEmergency}
                   selectedPatientIdInitial={selectedPatientForHistory}
-                  tutors={tutors}
+                  token={token}
+                  demoTutors={demoTutors}
+                  readOnly={isDemo}
                 />
               )}
 
               {activeTab === 'Administraciones' && (
-                <NurseAdministrationsView reminders={reminders} />
+                <NurseAdministrationsView reminders={visibleNurseReminders} />
+              )}
+
+              {activeTab === 'Vacunas' && (
+                <NurseVaccinesView
+                  vaccines={vaccines}
+                  patients={patients}
+                  onCreateVaccine={handleCreateVaccine}
+                  onUpdateVaccine={handleUpdateVaccine}
+                  onDeleteVaccine={handleDeleteVaccine}
+                  registrationCodeRole={currentRole}
+                  readOnly={isDemo}
+                />
               )}
             </>
           )}
@@ -983,7 +1390,7 @@ export default function AuthenticatedDashboard({
                     vaccines={vaccines}
                     consultations={consultations}
                     onNavigate={setActiveTab}
-                    tutorId={user?.id}
+                    accountDni={user?.dni}
                   />
                 )}
 
@@ -994,7 +1401,7 @@ export default function AuthenticatedDashboard({
                       setSelectedPatientForHistory(childId)
                       setActiveTab('Historial clínico')
                     }}
-                    tutorId={user?.id}
+                    accountDni={user?.dni}
                   />
                 )}
 
@@ -1002,8 +1409,10 @@ export default function AuthenticatedDashboard({
                   <FamilyAppointmentsView
                     appointments={appointments}
                     childrenPatients={familyChildren}
+                    doctors={doctors}
                     onBookAppointment={handleBookAppointment}
                     onCancelAppointment={handleCancelAppointment}
+                    readOnly={isDemo}
                   />
                 )}
 
@@ -1019,8 +1428,9 @@ export default function AuthenticatedDashboard({
                   <FamilyNotificationsView
                     notifications={notifications}
                     notificationSettings={notificationSettings}
-                    onUpdateSettings={setNotificationSettings}
+                    onUpdateSettings={handleUpdateNotificationSettings}
                     onMarkAsRead={handleMarkNotificationAsRead}
+                    readOnly={isDemo}
                   />
                 )}
               </>
@@ -1031,9 +1441,11 @@ export default function AuthenticatedDashboard({
 
       {/* Modal Universal de Emergencia (HU 3) */}
       <EmergencyProfileModal
+        key={emergencyTargetPatientId ?? 'all'}
         isOpen={isEmergencyModalOpen}
         onClose={() => setIsEmergencyModalOpen(false)}
         patients={patients}
+        medications={medications}
         initialPatientId={emergencyTargetPatientId}
       />
     </div>

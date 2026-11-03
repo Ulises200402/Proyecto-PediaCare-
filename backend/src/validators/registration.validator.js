@@ -1,3 +1,5 @@
+import { isValidDni, normalizeDni } from './dni.validator.js'
+
 const registrationRoles = new Set(['PADRE_MADRE', 'MEDICO', 'ENFERMERO'])
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -7,12 +9,14 @@ export function validateRegistration(body) {
   }
 
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : ''
+  const dni = normalizeDni(body.dni)
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const password = typeof body.password === 'string' ? body.password : ''
   const role = typeof body.role === 'string' ? body.role : ''
   const errors = []
 
   if (!nombre || nombre.length > 100) errors.push('nombre es obligatorio y admite hasta 100 caracteres.')
+  if (!isValidDni(dni)) errors.push('dni debe contener 7 u 8 dígitos.')
   if (!emailPattern.test(email) || email.length > 254) errors.push('email no es válido.')
   const passwordLength = Buffer.byteLength(password, 'utf8')
   if (passwordLength < 12 || passwordLength > 72) {
@@ -20,7 +24,7 @@ export function validateRegistration(body) {
   }
   if (!registrationRoles.has(role)) errors.push('role debe ser PADRE_MADRE, MEDICO o ENFERMERO.')
 
-  const value = { nombre, email, password, role }
+  const value = { nombre, dni, email, password, role }
 
   if (role === 'PADRE_MADRE') {
     const telefono = typeof body.telefono === 'string' ? body.telefono.trim() : ''

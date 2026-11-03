@@ -40,6 +40,7 @@ export default function RegisterPage({ onBackToLogin, onRegistered }) {
 
     const account = {
       nombre: form.get('nombre'),
+      dni: form.get('dni'),
       email: form.get('email'),
       password,
       role,
@@ -101,6 +102,20 @@ export default function RegisterPage({ onBackToLogin, onRegistered }) {
             <div className="field-group">
               <label htmlFor="register-name">Nombre completo</label>
               <input id="register-name" autoComplete="name" maxLength="100" name="nombre" required />
+            </div>
+            <div className="field-group">
+              <label htmlFor="register-dni">DNI</label>
+              <input
+                id="register-dni"
+                autoComplete="off"
+                inputMode="numeric"
+                maxLength="10"
+                name="dni"
+                pattern="[0-9. ]{7,10}"
+                placeholder="Solo DNI ficticio"
+                required
+              />
+              <span className="field-help">No ingreses tu documento real en este prototipo.</span>
             </div>
             <div className="field-group">
               <label htmlFor="register-email">Correo electrónico</label>

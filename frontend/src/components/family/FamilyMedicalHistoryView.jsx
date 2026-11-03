@@ -23,6 +23,11 @@ export default function FamilyMedicalHistoryView({
 
   // Vacunas del hijo seleccionado
   const childVaccines = vaccines.filter((v) => v.idPaciente === activeChild?.id)
+  const displayDate = (value) => new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
 
   return (
     <div className="family-history-view">
@@ -158,11 +163,7 @@ export default function FamilyMedicalHistoryView({
                         <span>
                           Aplicada el{' '}
                           <strong>
-                            {new Date(v.fechaAplicacion).toLocaleDateString('es-AR', {
-                              day: '2-digit',
-                              month: 'long',
-                              year: 'numeric',
-                            })}
+                            {displayDate(v.fechaAplicacion)}
                           </strong>
                         </span>
                       </div>
@@ -170,15 +171,11 @@ export default function FamilyMedicalHistoryView({
                       <div className="vaccine-pending-info">
                         <CalendarDays size={16} className="text-attention" />
                         <span>
-                          Fecha recomendada:{' '}
-                          <strong>
-                            {new Date(v.proximaDosis).toLocaleDateString('es-AR', {
-                              day: '2-digit',
-                              month: 'long',
-                              year: 'numeric',
-                            })}
-                          </strong>
-                          {v.diasRestantes ? ` (en ${v.diasRestantes} días)` : ''}
+                          {v.proximaDosis ? (
+                            <>
+                              Fecha recomendada: <strong>{displayDate(v.proximaDosis)}</strong>
+                            </>
+                          ) : 'Sin fecha de próxima dosis registrada.'}
                         </span>
                       </div>
                     )}
@@ -187,7 +184,9 @@ export default function FamilyMedicalHistoryView({
                   </div>
 
                   <footer className="vaccine-card__footer">
-                    <span className={`status-pill status-pill--${isApplied ? 'good' : 'attention'}`}>
+                    <span className={`status-pill status-pill--${
+                      isApplied ? 'good' : v.estado === 'Atrasada' ? 'danger' : 'attention'
+                    }`}>
                       {v.estado}
                     </span>
                   </footer>

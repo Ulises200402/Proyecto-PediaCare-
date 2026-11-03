@@ -6,14 +6,28 @@ import { validateRegistration } from '../src/validators/registration.validator.j
 test('validates and normalizes a parent account', () => {
   const result = validateRegistration({
     nombre: '  Marina Torres ',
+    dni: '12.345.678',
     email: ' MARINA@EXAMPLE.COM ',
     password: 'a-secure-password',
     role: 'PADRE_MADRE',
     telefono: '  1112345678 ',
   })
 
+  test('requires a 7- or 8-digit DNI', () => {
+    const result = validateRegistration({
+      nombre: 'Marina Torres',
+      dni: '123456',
+      email: 'marina@example.com',
+      password: 'a-secure-password',
+      role: 'PADRE_MADRE',
+    })
+
+    assert.ok(result.errors.some((error) => error.includes('dni')))
+  })
+
   assert.deepEqual(result.errors, undefined)
   assert.equal(result.value.nombre, 'Marina Torres')
+  assert.equal(result.value.dni, '12345678')
   assert.equal(result.value.email, 'marina@example.com')
   assert.equal(result.value.telefono, '1112345678')
 })
@@ -21,6 +35,7 @@ test('validates and normalizes a parent account', () => {
 test('requires professional profile fields and a registration code', () => {
   const result = validateRegistration({
     nombre: 'Lucía Benítez',
+    dni: '12345678',
     email: 'lucia@example.com',
     password: 'a-secure-password',
     role: 'MEDICO',

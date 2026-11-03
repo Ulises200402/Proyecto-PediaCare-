@@ -12,6 +12,7 @@ export default function DoctorAgendaView({
   appointments,
   onUpdateAppointmentStatus,
   onStartConsultation,
+  readOnly = false,
 }) {
   const [filterStatus, setFilterStatus] = useState('ALL') // 'ALL' | 'Confirmado' | 'Programado' | 'Atendido'
 
@@ -88,7 +89,16 @@ export default function DoctorAgendaView({
                 </div>
 
                 <div className="appointment-card__actions">
-                  {!isAttended && (
+                    {!readOnly && app.estado === 'Programado' && (
+                      <button
+                        type="button"
+                        className="action-btn action-btn--secondary"
+                        onClick={() => onUpdateAppointmentStatus(app.id, 'Confirmado')}
+                      >
+                        Confirmar
+                      </button>
+                    )}
+                    {!isAttended && (
                     <button
                       type="button"
                       className="action-btn action-btn--primary"
@@ -97,7 +107,7 @@ export default function DoctorAgendaView({
                       <Stethoscope size={15} /> Atender
                     </button>
                   )}
-                  {isConfirmed && (
+                  {!readOnly && isConfirmed && (
                     <button
                       type="button"
                       className="icon-action-btn icon-action-btn--check"
@@ -107,7 +117,7 @@ export default function DoctorAgendaView({
                       <Check size={16} />
                     </button>
                   )}
-                  {app.estado !== 'Cancelado' && !isAttended && (
+                  {!readOnly && app.estado !== 'Cancelado' && !isAttended && (
                     <button
                       type="button"
                       className="icon-action-btn icon-action-btn--danger"
@@ -126,4 +136,3 @@ export default function DoctorAgendaView({
     </div>
   )
 }
-

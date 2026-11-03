@@ -114,6 +114,7 @@ test('clinician registration rejects an invalid invitation code before database 
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         nombre: 'Lucía Benítez',
+        dni: '12345678',
         email: 'lucia@example.com',
         password: 'a-secure-password',
         role: 'MEDICO',

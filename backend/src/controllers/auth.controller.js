@@ -30,6 +30,7 @@ export async function register(request, response, next) {
     const passwordHash = await bcrypt.hash(account.password, 12)
     const user = await createUserWithProfile({
       nombre: account.nombre,
+      dni: account.dni,
       email: account.email,
       contrasenaHash: passwordHash,
       rol: account.role,
@@ -44,6 +45,7 @@ export async function register(request, response, next) {
       user: {
         id: user.id,
         name: account.nombre,
+        dni: account.dni,
         email: account.email,
         role: account.role,
       },
@@ -51,7 +53,7 @@ export async function register(request, response, next) {
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return response.status(409).json({
-        error: 'Ya existe una cuenta con ese correo o matrícula.',
+        error: 'Ya existe una cuenta con ese correo, DNI o matrícula.',
       })
     }
     return next(error)
@@ -90,6 +92,7 @@ export async function login(request, response, next) {
       user: {
         id: user.id_usuario,
         name: user.nombre,
+        dni: user.dni,
         email: user.email,
         role: user.rol,
       },
@@ -100,6 +103,6 @@ export async function login(request, response, next) {
 }
 
 export function getCurrentUser(request, response) {
-  const { id, name, email, role } = request.user
-  return response.json({ id, name, email, role })
+  const { id, name, dni, email, role } = request.user
+  return response.json({ id, name, dni, email, role })
 }

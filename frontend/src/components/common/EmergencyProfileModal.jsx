@@ -11,7 +11,13 @@ import {
   Activity,
 } from 'lucide-react'
 
-export default function EmergencyProfileModal({ isOpen, onClose, patients, initialPatientId }) {
+export default function EmergencyProfileModal({
+  isOpen,
+  onClose,
+  patients,
+  medications = [],
+  initialPatientId,
+}) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPatientId, setSelectedPatientId] = useState(initialPatientId || patients[0]?.id || 1)
 
@@ -19,10 +25,12 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
 
   const filteredPatients = patients.filter((p) =>
     p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(p.id).includes(searchTerm)
+    String(p.dni || '').includes(searchTerm.replace(/[.\s]/g, ''))
   )
 
   const activePatient = patients.find((p) => p.id === selectedPatientId) || patients[0]
+  const activeMedications = medications.filter((medication) =>
+    medication.idPaciente === activePatient?.id && medication.estado === 'Activa')
 
   return (
     <div className="emergency-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="emergency-title">
@@ -52,7 +60,7 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
             <Search size={18} className="input-shell__icon" />
             <input
               type="text"
-              placeholder="Buscar paciente por nombre o ID para guardia / emergencias..."
+              placeholder="Buscar paciente por nombre o DNI..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus
@@ -96,7 +104,7 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
                 <div className="emergency-identity-top">
                   <h2>{activePatient.nombre}</h2>
                   <span className="emergency-blood-badge">
-                    Grupo: <strong>{activePatient.grupoSanguineo || '0+'}</strong>
+                    Grupo sanguíneo: <strong>{activePatient.grupoSanguineo || 'No registrado'}</strong>
                   </span>
                 </div>
                 <div className="emergency-identity-meta">
@@ -104,7 +112,7 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
                   <span><strong>Edad:</strong> {activePatient.edad}</span>
                   <span><strong>Sexo:</strong> {activePatient.sexo}</span>
                   <span><strong>Nacimiento:</strong> {activePatient.fechaNacimiento}</span>
-                  <span><strong>Pediatra:</strong> {activePatient.pediatraCabecera || 'Dra. Lucía Benítez'}</span>
+                  <span><strong>Pediatra:</strong> {activePatient.pediatraCabecera || 'No asignado'}</span>
                 </div>
               </div>
             </div>
@@ -144,7 +152,15 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
                   <h3>Medicación en curso</h3>
                 </div>
                 <div className="emergency-block-body">
-                  <p>{activePatient.medicacionActual || 'No tiene medicación activa actualmente.'}</p>
+                  {activeMedications.length ? (
+                    <ul>
+                      {activeMedications.map((medication) => (
+                        <li key={medication.id}>
+                          {medication.medicamento} · {medication.dosis} · {medication.via}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p>No hay planes de medicación activa registrados.</p>}
                 </div>
               </section>
             </div>
@@ -158,29 +174,27 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
               <div className="emergency-contacts-grid">
                 <div className="emergency-contact-card">
                   <div className="emergency-contact-role">TUTOR PRINCIPAL (1)</div>
-                  <strong>{activePatient.tutor1Nombre || 'Tutor Responsable'}</strong>
-                  <a
-                    href={`tel:${activePatient.tutor1Telefono || ''}`}
-                    className="emergency-phone-btn"
-                  >
-                    <PhoneCall size={16} />
-                    <span>{activePatient.tutor1Telefono || '+54 9 11 4521-8890'}</span>
-                    <span className="emergency-call-label">Llamar ahora</span>
-                  </a>
+                  <strong>{activePatient.tutor1Nombre || 'Sin tutor principal registrado'}</strong>
+                  {activePatient.tutor1Telefono ? (
+                    <a href={`tel:${activePatient.tutor1Telefono}`} className="emergency-phone-btn">
+                      <PhoneCall size={16} />
+                      <span>{activePatient.tutor1Telefono}</span>
+                      <span className="emergency-call-label">Llamar ahora</span>
+                    </a>
+                  ) : <span>Sin teléfono registrado</span>}
                 </div>
 
                 {activePatient.tutor2Nombre && (
                   <div className="emergency-contact-card">
                     <div className="emergency-contact-role">TUTOR SECUNDARIO (2)</div>
                     <strong>{activePatient.tutor2Nombre}</strong>
-                    <a
-                      href={`tel:${activePatient.tutor2Telefono || ''}`}
-                      className="emergency-phone-btn"
-                    >
-                      <PhoneCall size={16} />
-                      <span>{activePatient.tutor2Telefono}</span>
-                      <span className="emergency-call-label">Llamar</span>
-                    </a>
+                    {activePatient.tutor2Telefono ? (
+                      <a href={`tel:${activePatient.tutor2Telefono}`} className="emergency-phone-btn">
+                        <PhoneCall size={16} />
+                        <span>{activePatient.tutor2Telefono}</span>
+                        <span className="emergency-call-label">Llamar</span>
+                      </a>
+                    ) : <span>Sin teléfono registrado</span>}
                   </div>
                 )}
               </div>
@@ -206,4 +220,3 @@ export default function EmergencyProfileModal({ isOpen, onClose, patients, initi
     </div>
   )
 }
-

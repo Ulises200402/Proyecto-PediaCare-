@@ -22,15 +22,23 @@ export default function DoctorConsultationsView({
   onUpdateConsultation,
   onDeleteConsultation,
   onViewPatientHistory,
+  readOnly = false,
 }) {
+  const consultationList = Array.isArray(consultations) ? consultations.filter(Boolean) : []
+  const patientList = Array.isArray(patients) ? patients.filter(Boolean) : []
   const [filterMode, setFilterMode] = useState('today') // 'today' | 'all'
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingConsultation, setEditingConsultation] = useState(null)
   const [consultationToDelete, setConsultationToDelete] = useState(null)
+  const [registrationCode, setRegistrationCode] = useState('')
+  const [deleteRegistrationCode, setDeleteRegistrationCode] = useState('')
+  const [formError, setFormError] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state
-  const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id || '')
+  const [selectedPatientId, setSelectedPatientId] = useState(patientList[0]?.id || '')
   const [motivo, setMotivo] = useState('')
   const [diagnostico, setDiagnostico] = useState('')
   const [tratamiento, setTratamiento] = useState('')
@@ -38,12 +46,12 @@ export default function DoctorConsultationsView({
   const [indicacionesParaPadres, setIndicacionesParaPadres] = useState('')
 
   // Resumen mensual calculado (HU 1)
-  const totalConsultasMes = consultations.length
-  const consultasHoy = consultations.filter((c) => c.esHoy).length
-  const pacientesUnicosAtendidos = new Set(consultations.map((c) => c.idPaciente)).size
+  const totalConsultasMes = consultationList.length
+  const consultasHoy = consultationList.filter((c) => c.esHoy).length
+  const pacientesUnicosAtendidos = new Set(consultationList.map((c) => c.idPaciente)).size
 
   // Filtrado de consultas
-  const filteredConsultations = consultations.filter((c) => {
+  const filteredConsultations = consultationList.filter((c) => {
     if (filterMode === 'today' && !c.esHoy) return false
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
@@ -57,7 +65,9 @@ export default function DoctorConsultationsView({
 
   function openCreateModal() {
     setEditingConsultation(null)
-    setSelectedPatientId(patients[0]?.id || '')
+    setRegistrationCode('')
+    setFormError('')
+    setSelectedPatientId(patientList[0]?.id || '')
     setMotivo('')
     setDiagnostico('')
     setTratamiento('')
@@ -67,7 +77,10 @@ export default function DoctorConsultationsView({
   }
 
   function openEditModal(c) {
+    if (!c) return
     setEditingConsultation(c)
+    setRegistrationCode('')
+    setFormError('')
     setSelectedPatientId(c.idPaciente)
     setMotivo(c.motivo || '')
     setDiagnostico(c.diagnostico || '')
@@ -77,13 +90,13 @@ export default function DoctorConsultationsView({
     setIsModalOpen(true)
   }
 
-  function handleFormSubmit(e) {
+  async function handleFormSubmit(e) {
     e.preventDefault()
-    const patientObj = patients.find((p) => p.id === Number(selectedPatientId))
+    const patientObj = patientList.find((p) => p.id === Number(selectedPatientId))
     const now = new Date()
 
     if (editingConsultation) {
-      onUpdateConsultation({
+      const result = await onUpdateConsultation({
         ...editingConsultation,
         idPaciente: Number(selectedPatientId),
         pacienteNombre: patientObj?.nombre || editingConsultation.pacienteNombre,
@@ -92,7 +105,11 @@ export default function DoctorConsultationsView({
         tratamiento,
         observaciones,
         indicacionesParaPadres,
-      })
+      }, registrationCode)
+      if (!result?.ok) {
+        setFormError(result?.error || 'No se pudo actualizar la consulta.')
+        return
+      }
     } else {
       // Registrar consulta con fecha automática (HU 1)
       const newConsultation = {
@@ -113,6 +130,21 @@ export default function DoctorConsultationsView({
     }
 
     setIsModalOpen(false)
+    setRegistrationCode('')
+  }
+
+  async function handleDeleteConsultation() {
+    if (!consultationToDelete) return
+    setIsDeleting(true)
+    setDeleteError('')
+    const result = await onDeleteConsultation(consultationToDelete.id, deleteRegistrationCode)
+    setIsDeleting(false)
+    if (!result?.ok) {
+      setDeleteError(result?.error || 'No se pudo eliminar la consulta.')
+      return
+    }
+    setConsultationToDelete(null)
+    setDeleteRegistrationCode('')
   }
 
   return (
@@ -174,14 +206,16 @@ export default function DoctorConsultationsView({
             />
           </div>
 
-          <button
-            type="button"
-            className="action-btn action-btn--primary"
-            onClick={openCreateModal}
-          >
-            <Plus size={16} />
-            <span>Nueva Consulta</span>
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="action-btn action-btn--primary"
+              onClick={openCreateModal}
+            >
+              <Plus size={16} />
+              <span>Nueva Consulta</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -196,13 +230,15 @@ export default function DoctorConsultationsView({
                 ? 'No hay consultas registradas para el día de hoy.'
                 : 'No se encontraron consultas que coincidan con la búsqueda.'}
             </p>
-            <button
-              type="button"
-              className="action-btn action-btn--primary"
-              onClick={openCreateModal}
-            >
-              <Plus size={16} /> Registrar consulta ahora
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="action-btn action-btn--primary"
+                onClick={openCreateModal}
+              >
+                <Plus size={16} /> Registrar consulta ahora
+              </button>
+            )}
           </div>
         ) : (
           filteredConsultations.map((c) => (
@@ -247,24 +283,32 @@ export default function DoctorConsultationsView({
                       <span>Ver historial</span>
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className="icon-action-btn"
-                    title="Editar consulta (HU 1)"
-                    onClick={() => openEditModal(c)}
-                  >
-                    <Edit2 size={16} />
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-action-btn icon-action-btn--danger"
-                    title="Eliminar consulta (HU 1)"
-                    onClick={() => setConsultationToDelete(c)}
-                  >
-                    <Trash2 size={16} />
-                    <span>Eliminar</span>
-                  </button>
+                  {!readOnly && (
+                    <>
+                      <button
+                        type="button"
+                        className="icon-action-btn"
+                        title="Editar consulta (HU 1)"
+                        onClick={() => openEditModal(c)}
+                      >
+                        <Edit2 size={16} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-action-btn icon-action-btn--danger"
+                        title="Eliminar consulta (HU 1)"
+                        onClick={() => {
+                          setDeleteRegistrationCode('')
+                          setDeleteError('')
+                          setConsultationToDelete(c)
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        <span>Eliminar</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -309,7 +353,7 @@ export default function DoctorConsultationsView({
       </div>
 
       {/* Modal para Crear / Editar Consulta (HU 1) */}
-      {isModalOpen && (
+      {!readOnly && isModalOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <header className="modal-header">
@@ -320,7 +364,10 @@ export default function DoctorConsultationsView({
               <button
                 type="button"
                 className="modal-close-btn"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setRegistrationCode('')
+                }}
               >
                 <X size={18} />
               </button>
@@ -336,9 +383,9 @@ export default function DoctorConsultationsView({
                     required
                     disabled={Boolean(editingConsultation)}
                   >
-                    {patients.map((p) => (
+                    {patientList.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.nombre} (ID #{p.id} · {p.edad})
+                        {p.dni || 'DNI pendiente'} · {p.nombre} ({p.edad})
                       </option>
                     ))}
                   </select>
@@ -404,6 +451,21 @@ export default function DoctorConsultationsView({
                 />
               </label>
 
+              {editingConsultation && (
+                <label>
+                  <span>Código de registro médico *</span>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={registrationCode}
+                    onChange={(event) => setRegistrationCode(event.target.value)}
+                    required
+                  />
+                  <small>Solicitá el código vigente al dueño del software para autorizar este cambio.</small>
+                </label>
+              )}
+              {formError && <p className="form-error" role="alert">{formError}</p>}
+
               <footer className="modal-footer">
                 <button
                   type="button"
@@ -422,7 +484,7 @@ export default function DoctorConsultationsView({
       )}
 
       {/* Modal de confirmación para Eliminar Consulta (HU 1) */}
-      {consultationToDelete && (
+      {!readOnly && consultationToDelete && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card modal-card--small">
             <div className="delete-dialog-content">
@@ -432,23 +494,35 @@ export default function DoctorConsultationsView({
                 Se eliminará la consulta del paciente <strong>{consultationToDelete.pacienteNombre}</strong> ({consultationToDelete.motivo}).
                 Esta acción no se puede deshacer.
               </p>
+              <label>
+                <span>Código de registro médico *</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={deleteRegistrationCode}
+                  onChange={(event) => setDeleteRegistrationCode(event.target.value)}
+                  required
+                />
+              </label>
+              {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
               <div className="dialog-buttons">
                 <button
                   type="button"
                   className="action-btn action-btn--secondary"
-                  onClick={() => setConsultationToDelete(null)}
+                  onClick={() => {
+                    setConsultationToDelete(null)
+                    setDeleteRegistrationCode('')
+                  }}
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   className="action-btn action-btn--danger"
-                  onClick={() => {
-                    onDeleteConsultation(consultationToDelete.id)
-                    setConsultationToDelete(null)
-                  }}
+                  onClick={handleDeleteConsultation}
+                  disabled={isDeleting || !deleteRegistrationCode}
                 >
-                  Confirmar Eliminación
+                  {isDeleting ? 'Eliminando…' : 'Confirmar Eliminación'}
                 </button>
               </div>
             </div>

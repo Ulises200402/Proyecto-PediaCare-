@@ -14,7 +14,7 @@ export default function FamilyOverviewView({
   vaccines,
   consultations,
   onNavigate,
-  tutorId,
+  accountDni,
 }) {
   const currentChild = childrenPatients[0]
 
@@ -25,11 +25,11 @@ export default function FamilyOverviewView({
           <UsersRound size={42} style={{ color: 'var(--pine)', marginBottom: '1rem' }} />
           <h2>Bienvenido/a al Portal Familiar de PediaCare+</h2>
           <p style={{ maxWidth: '520px', margin: '0 auto 1rem' }}>
-            Tu cuenta de Padre/Madre está activa con el <strong>ID de Tutor #{tutorId || '—'}</strong>.
+            Tu cuenta de Padre/Madre está activa. El DNI asociado es <strong>{accountDni || 'pendiente'}</strong>.
             Aún no se han registrado fichas pediátricas asociadas a tu usuario en la base de datos.
           </p>
           <p style={{ color: 'var(--muted)', fontSize: '13px', maxWidth: '480px', margin: '0 auto' }}>
-            Al momento de la consulta pediátrica, el médico ingresará tu ID de tutor y el registro de tu hijo/a aparecerá automáticamente aquí.
+            Al momento de la consulta pediátrica, el médico buscará tu cuenta por nombre o DNI y asociará la ficha de tu hijo/a.
           </p>
         </section>
       </div>
@@ -37,13 +37,26 @@ export default function FamilyOverviewView({
   }
 
   // Próximo turno de los hijos
-  const upcomingAppointment = appointments.find((a) => a.estado === 'Confirmado' || a.estado === 'Programado')
+  const patientIds = new Set(childrenPatients.map((patient) => patient.id))
+  const upcomingAppointment = appointments
+    .filter((appointment) =>
+      patientIds.has(appointment.idPaciente) &&
+      ['Confirmado', 'Programado'].includes(appointment.estado) &&
+      new Date(String(appointment.fechaHora).replace(' ', 'T')) >= new Date())
+    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))[0]
 
   // Próxima vacuna
-  const nextVaccine = vaccines.find((v) => v.estado === 'Pendiente')
+  const nextVaccine = vaccines
+    .filter((vaccine) => patientIds.has(vaccine.idPaciente) && vaccine.estado !== 'Aplicada' && vaccine.proximaDosis)
+    .sort((a, b) => new Date(`${a.proximaDosis}T00:00:00`) - new Date(`${b.proximaDosis}T00:00:00`))[0]
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const vaccineDaysRemaining = nextVaccine
+    ? Math.ceil((new Date(`${nextVaccine.proximaDosis}T00:00:00`) - today) / 86400000)
+    : null
 
   // Última consulta médica
-  const lastConsultation = consultations.find((c) => c.idPaciente === currentChild.id) || consultations[0]
+  const lastConsultation = consultations.find((c) => c.idPaciente === currentChild.id)
 
   return (
     <div className="family-overview">
@@ -55,10 +68,10 @@ export default function FamilyOverviewView({
         <div className="patient-banner__identity">
           <span>SEGUIMIENTO DE SALUD</span>
           <strong>{currentChild.nombre}</strong>
-          <small>{currentChild.edad} · {currentChild.estadoGeneral || 'Seguimiento al día'}</small>
+          <small>{currentChild.edad} · {currentChild.estadoGeneral || 'Ficha pediátrica'}</small>
         </div>
         <span className="patient-banner__status">
-          <CheckCircle size={15} /> Estado al día
+          <CheckCircle size={15} /> Ficha activa
         </span>
         <button
           className="patient-banner__select"
@@ -74,7 +87,9 @@ export default function FamilyOverviewView({
         <section className="appointment-feature">
           <div className="appointment-feature__topline">
             <span className="section-kicker">PRÓXIMO TURNO MÉDICO</span>
-            <span className="appointment-feature__tag">Confirmado</span>
+            <span className="appointment-feature__tag">
+              {upcomingAppointment?.estado === 'Confirmado' ? 'Confirmado' : 'Pendiente de confirmación'}
+            </span>
           </div>
 
           {upcomingAppointment ? (
@@ -134,19 +149,20 @@ export default function FamilyOverviewView({
             <>
               <div className="vaccine-panel__name">{nextVaccine.nombre}</div>
               <div className="vaccine-panel__date">
-                {new Date(nextVaccine.proximaDosis).toLocaleDateString('es-AR', {
+                {new Date(`${nextVaccine.proximaDosis}T00:00:00`).toLocaleDateString('es-AR', {
                   day: '2-digit',
                   month: 'long',
                 })}{' '}
-                <span>{nextVaccine.diasRestantes ? `en ${nextVaccine.diasRestantes} días` : 'próximamente'}</span>
+                <span>
+                  {vaccineDaysRemaining > 0
+                    ? `en ${vaccineDaysRemaining} días`
+                    : vaccineDaysRemaining === 0 ? 'hoy' : 'fecha vencida'}
+                </span>
               </div>
-              <div className="progress-track">
-                <span style={{ width: '65%' }} />
-              </div>
-              <p>Recordatorio automático activado · Aviso por App y Correo</p>
+              <p>El aviso se mostrará en la aplicación según tus preferencias.</p>
             </>
           ) : (
-            <p>Esquema de vacunación completo para la edad.</p>
+            <p>No hay próximas dosis registradas.</p>
           )}
         </section>
 
@@ -169,7 +185,7 @@ export default function FamilyOverviewView({
           </div>
           <div className="care-summary__line">
             <span>Pediatra de cabecera</span>
-            <strong>{currentChild.pediatraCabecera || 'Dra. Lucía Benítez'}</strong>
+            <strong>{currentChild.pediatraCabecera || 'Sin asignar'}</strong>
           </div>
           <p>Esta información se comparte de forma segura con el equipo de guardia médica en caso de emergencia.</p>
         </section>
