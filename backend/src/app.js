@@ -4,6 +4,8 @@ import healthRouter from './routes/health.routes.js'
 import patientRouter from './routes/patient.routes.js'
 import consultationRouter from './routes/consultation.routes.js'
 import appointmentRouter from './routes/appointment.routes.js'
+import clinicalRouter from './routes/clinical.routes.js'
+import notificationRouter from './routes/notification.routes.js'
 import { errorHandler } from './middleware/error.middleware.js'
 
 const app = express()
@@ -14,6 +16,8 @@ app.use('/api/health', healthRouter)
 app.use('/api/patients', patientRouter)
 app.use('/api/consultations', consultationRouter)
 app.use('/api/appointments', appointmentRouter)
+app.use('/api/clinical', clinicalRouter)
+app.use('/api/notifications', notificationRouter)
 
 app.use((request, response) => {
   response.status(404).json({ error: 'Recurso no encontrado' })

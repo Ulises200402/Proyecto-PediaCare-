@@ -4,6 +4,7 @@ const patientSelect = `
   SELECT
     p.id_paciente AS id,
     p.nombre,
+    p.dni,
     p.fecha_nacimiento AS fechaNacimiento,
     p.sexo,
     p.alergias,
@@ -12,8 +13,10 @@ const patientSelect = `
     p.id_tutor_2 AS idTutor2,
     p.fecha_alta AS fechaAlta,
     t1.nombre AS tutor1Nombre,
+    t1.dni AS tutor1Dni,
     t1p.telefono AS tutor1Telefono,
     t2.nombre AS tutor2Nombre,
+    t2.dni AS tutor2Dni,
     t2p.telefono AS tutor2Telefono
   FROM paciente AS p
   LEFT JOIN usuario AS t1 ON t1.id_usuario = p.id_tutor_1
@@ -65,11 +68,12 @@ export async function createPatientWithHistory(patient) {
     await connection.beginTransaction()
     const [result] = await connection.execute(
       `INSERT INTO paciente
-         (nombre, fecha_nacimiento, sexo, alergias, enfermedades_cronicas,
+         (nombre, dni, fecha_nacimiento, sexo, alergias, enfermedades_cronicas,
           id_tutor_1, id_tutor_2)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         patient.nombre,
+        patient.dni,
         patient.fechaNacimiento,
         patient.sexo,
         patient.alergias,
@@ -99,15 +103,28 @@ export async function createPatientWithHistory(patient) {
   }
 }
 
-export async function findTutors() {
+export async function findTutors(search = '') {
+  const normalizedSearch = search.trim()
+  const values = []
+  let searchFilter = ''
+  if (normalizedSearch) {
+    const dniSearch = normalizedSearch.replace(/[.\s]/g, '')
+    searchFilter = 'WHERE u.nombre LIKE ? OR (? <> \'\' AND u.dni LIKE ?)'
+    values.push(`%${normalizedSearch}%`, dniSearch, `%${dniSearch}%`)
+  }
+
   const [rows] = await pool.execute(
     `SELECT
        pm.id_usuario AS id,
        u.nombre,
+       u.dni,
        pm.telefono
      FROM padre_madre AS pm
      INNER JOIN usuario AS u ON u.id_usuario = pm.id_usuario
-     ORDER BY u.nombre`,
+     ${searchFilter}
+     ORDER BY u.nombre
+     LIMIT 50`,
+    values,
   )
   return rows
 }
@@ -116,6 +133,7 @@ export async function updatePatient(patientId, patient) {
   const [result] = await pool.execute(
     `UPDATE paciente SET
        nombre = ?,
+       dni = ?,
        fecha_nacimiento = ?,
        sexo = ?,
        alergias = ?,
@@ -125,6 +143,7 @@ export async function updatePatient(patientId, patient) {
      WHERE id_paciente = ?`,
     [
       patient.nombre,
+      patient.dni,
       patient.fechaNacimiento,
       patient.sexo,
       patient.alergias,
@@ -134,8 +153,6 @@ export async function updatePatient(patientId, patient) {
       patientId,
     ],
   )
-
-  if (result.affectedRows === 0) return null
 
   const [rows] = await pool.execute(
     `${patientSelect} WHERE p.id_paciente = ? LIMIT 1`,

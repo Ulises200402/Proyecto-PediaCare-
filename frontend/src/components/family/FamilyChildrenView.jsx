@@ -5,7 +5,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 
-export default function FamilyChildrenView({ childrenPatients, onNavigateToHistory, tutorId }) {
+export default function FamilyChildrenView({ childrenPatients, onNavigateToHistory, accountDni }) {
   return (
     <div className="family-children-view">
       <div className="panel-title-row">
@@ -22,10 +22,10 @@ export default function FamilyChildrenView({ childrenPatients, onNavigateToHisto
           <h3>No tenés pacientes vinculados a tu cuenta aún</h3>
           <p>
             Para que tu hijo/a aparezca aquí, el médico pediatra debe dar de alta su ficha clínica
-            indicando tu <strong>ID de Tutor (#{tutorId || '—'})</strong>.
+            asociándola con tu <strong>DNI de cuenta ({accountDni || 'pendiente'})</strong>.
           </p>
           <p style={{ fontSize: '12px', color: 'var(--pine-soft)' }}>
-            Proporcionale este número a tu pediatra al momento de la consulta o alta clínica.
+            Si tu DNI figura como pendiente, consultá con quien administra la aplicación antes de vincular la ficha.
           </p>
         </div>
       ) : (
@@ -39,7 +39,7 @@ export default function FamilyChildrenView({ childrenPatients, onNavigateToHisto
                 <div className="child-card__identity">
                   <h3>{child.nombre}</h3>
                   <span className="child-age-pill">{child.edad} · {child.sexo}</span>
-                  <span className="child-id">Ficha clínica #{child.id}</span>
+                  <span className="child-id">DNI {child.dni || 'pendiente'}</span>
                 </div>
               </header>
 
@@ -50,18 +50,18 @@ export default function FamilyChildrenView({ childrenPatients, onNavigateToHisto
                 </div>
                 <div className="child-info-row">
                   <span>Grupo sanguíneo:</span>
-                  <strong>{child.grupoSanguineo || '0+'}</strong>
+                  <strong>{child.grupoSanguineo || 'No registrado'}</strong>
                 </div>
                 <div className="child-info-row">
                   <span>Pediatra asignada:</span>
-                  <strong>{child.pediatraCabecera || 'Dra. Lucía Benítez'}</strong>
+                  <strong>{child.pediatraCabecera || 'Sin asignar'}</strong>
                 </div>
 
                 <div className="child-alert-box child-alert-box--danger">
                   <ShieldAlert size={16} />
                   <div>
                     <strong>Alergias registradas:</strong>
-                    <p>{child.alergias || 'Sin alergias conocidas'}</p>
+                    <p>{child.alergias || 'No hay alergias registradas en la ficha'}</p>
                   </div>
                 </div>
 
@@ -69,7 +69,7 @@ export default function FamilyChildrenView({ childrenPatients, onNavigateToHisto
                   <HeartPulse size={16} />
                   <div>
                     <strong>Enfermedades crónicas:</strong>
-                    <p>{child.enfermedadesCronicas || 'Ninguna'}</p>
+                    <p>{child.enfermedadesCronicas || 'No hay enfermedades crónicas registradas en la ficha'}</p>
                   </div>
                 </div>
               </div>

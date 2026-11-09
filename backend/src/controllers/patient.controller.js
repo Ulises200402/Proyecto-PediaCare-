@@ -45,6 +45,9 @@ export async function createPatient(request, response, next) {
     const patient = await createPatientWithHistory(validation.value)
     return response.status(201).json({ data: patient })
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return response.status(409).json({ error: 'Ese DNI ya está registrado para otro paciente.' })
+    }
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return response.status(400).json({
         error: 'Los tutores deben ser cuentas existentes de padre/madre.',
@@ -55,8 +58,13 @@ export async function createPatient(request, response, next) {
 }
 
 export async function listTutors(request, response, next) {
+  const search = typeof request.query.search === 'string' ? request.query.search.trim() : ''
+  if (search.length > 80) {
+    return response.status(400).json({ error: 'La búsqueda no debe superar 80 caracteres.' })
+  }
+
   try {
-    const tutors = await findTutors()
+    const tutors = await findTutors(search)
     return response.json({ data: tutors })
   } catch (error) {
     return next(error)
@@ -83,6 +91,9 @@ export async function editPatient(request, response, next) {
 
     return response.json({ data: patient })
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return response.status(409).json({ error: 'Ese DNI ya está registrado para otro paciente.' })
+    }
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return response.status(400).json({
         error: 'Los tutores deben ser cuentas existentes de padre/madre.',

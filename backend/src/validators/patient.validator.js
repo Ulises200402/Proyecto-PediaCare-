@@ -1,3 +1,5 @@
+import { isValidDni, normalizeDni } from './dni.validator.js'
+
 const allowedSexValues = new Set([
   'Femenino',
   'Masculino',
@@ -30,6 +32,7 @@ export function validateNewPatient(body) {
   }
 
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : ''
+  const dni = normalizeDni(body.dni)
   const idTutor1 = Number(body.idTutor1)
   const idTutor2 = body.idTutor2 == null || body.idTutor2 === ''
     ? null
@@ -39,6 +42,7 @@ export function validateNewPatient(body) {
   if (!nombre || nombre.length > 100) {
     errors.push('nombre es obligatorio y admite hasta 100 caracteres.')
   }
+  if (!isValidDni(dni)) errors.push('dni debe contener 7 u 8 dígitos.')
   if (!isValidDate(body.fechaNacimiento)) {
     errors.push('fechaNacimiento debe ser una fecha válida, no futura, con formato AAAA-MM-DD.')
   }
@@ -67,6 +71,7 @@ export function validateNewPatient(body) {
   return {
     value: {
       nombre,
+      dni,
       fechaNacimiento: body.fechaNacimiento,
       sexo: body.sexo,
       alergias: body.alergias?.trim() || null,

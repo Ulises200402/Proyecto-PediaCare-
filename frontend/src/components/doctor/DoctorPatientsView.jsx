@@ -14,15 +14,18 @@ import {
   Phone,
   Activity,
 } from 'lucide-react'
+import TutorSearchSelect from './TutorSearchSelect.jsx'
 
 export default function DoctorPatientsView({
+  token,
   patients,
   consultations,
   onAddPatient,
   onUpdatePatient,
   onOpenEmergencyModal,
   selectedPatientIdInitial = null,
-  tutors = [],
+  demoTutors = [],
+  readOnly = false,
 }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [activePatientId, setActivePatientId] = useState(
@@ -34,6 +37,7 @@ export default function DoctorPatientsView({
 
   // Form para nuevo paciente (HU 1)
   const [nombre, setNombre] = useState('')
+  const [dni, setDni] = useState('')
   const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [sexo, setSexo] = useState('Femenino')
   const [idTutor1, setIdTutor1] = useState('')
@@ -43,6 +47,7 @@ export default function DoctorPatientsView({
 
   // Form para editar paciente (HU 1)
   const [editNombre, setEditNombre] = useState('')
+  const [editDni, setEditDni] = useState('')
   const [editFechaNacimiento, setEditFechaNacimiento] = useState('')
   const [editSexo, setEditSexo] = useState('Femenino')
   const [editIdTutor1, setEditIdTutor1] = useState('')
@@ -50,11 +55,11 @@ export default function DoctorPatientsView({
   const [editAlergias, setEditAlergias] = useState('')
   const [editEnfermedadesCronicas, setEditEnfermedadesCronicas] = useState('')
 
-  // Filtrado HU 2: Buscar paciente por nombre o ID
+  // Filtrado de pacientes por nombre o DNI; el ID queda reservado al sistema.
   const filteredPatients = patients.filter((p) => {
     if (!searchTerm) return true
     const term = searchTerm.toLowerCase()
-    return p.nombre.toLowerCase().includes(term) || String(p.id).includes(term)
+    return p.nombre.toLowerCase().includes(term) || String(p.dni || '').includes(term.replace(/[.\s]/g, ''))
   })
 
   const currentPatient =
@@ -68,9 +73,14 @@ export default function DoctorPatientsView({
   async function handleCreateSubmit(e) {
     e.preventDefault()
     setSubmitError('')
+    if (!idTutor1) {
+      setSubmitError('Seleccioná un tutor responsable para continuar.')
+      return
+    }
 
     const newPatient = {
       nombre,
+      dni,
       fechaNacimiento,
       sexo,
       alergias: alergias || 'Sin alergias registradas',
@@ -88,6 +98,7 @@ export default function DoctorPatientsView({
     if (result.patient) setActivePatientId(result.patient.id)
     setIsCreatingPatient(false)
     setNombre('')
+    setDni('')
     setFechaNacimiento('')
     setIdTutor1('')
     setIdTutor2('')
@@ -97,6 +108,7 @@ export default function DoctorPatientsView({
 
   function openEditModal(patient) {
     setEditNombre(patient.nombre || '')
+    setEditDni(patient.dni || '')
     setEditFechaNacimiento(patient.fechaNacimiento || '')
     setEditSexo(patient.sexo || 'Femenino')
     setEditIdTutor1(patient.idTutor1 ? String(patient.idTutor1) : '')
@@ -113,10 +125,15 @@ export default function DoctorPatientsView({
   async function handleEditSubmit(e) {
     e.preventDefault()
     setSubmitError('')
+    if (!editIdTutor1) {
+      setSubmitError('Seleccioná un tutor responsable para continuar.')
+      return
+    }
 
     const updatedPatient = {
       id: currentPatient.id,
       nombre: editNombre,
+      dni: editDni,
       fechaNacimiento: editFechaNacimiento,
       sexo: editSexo,
       alergias: editAlergias || 'Sin alergias registradas',
@@ -143,21 +160,23 @@ export default function DoctorPatientsView({
             <span className="section-kicker">DIRECTORIO CLÍNICO</span>
             <h2>Pacientes ({patients.length})</h2>
           </div>
-          <button
-            type="button"
-            className="action-btn action-btn--primary action-btn--small"
-            onClick={() => setIsCreatingPatient(true)}
-          >
-            <Plus size={15} /> Nuevo
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="action-btn action-btn--primary action-btn--small"
+              onClick={() => setIsCreatingPatient(true)}
+            >
+              <Plus size={15} /> Nuevo
+            </button>
+          )}
         </div>
 
-        {/* Buscador de paciente por nombre o ID (HU 2) */}
+        {/* El directorio permite localizar pacientes por nombre o DNI, nunca por ID interno. */}
         <div className="input-shell patients-search-box">
           <Search size={16} className="input-shell__icon" />
           <input
             type="text"
-            placeholder="Buscar por nombre o ID..."
+            placeholder="Buscar por nombre o DNI..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -194,7 +213,7 @@ export default function DoctorPatientsView({
                   <div className="patient-list-card__info">
                     <strong>{p.nombre}</strong>
                     <span>
-                      #{p.id} · {p.edad || 'Pediátrico'} · {p.sexo}
+                      DNI {p.dni || 'pendiente'} · {p.edad || 'Pediátrico'} · {p.sexo}
                     </span>
                     <small className="patient-tutor-name">Tutor: {p.tutor1Nombre}</small>
                   </div>
@@ -223,7 +242,7 @@ export default function DoctorPatientsView({
                 <div>
                   <div className="patient-detail-topline">
                     <h1>{currentPatient.nombre}</h1>
-                    <span className="patient-id-badge">ID #{currentPatient.id}</span>
+                    <span className="patient-id-badge">DNI {currentPatient.dni || 'pendiente'}</span>
                     <span className="status-pill status-pill--good">
                       {currentPatient.estadoGeneral || 'Seguimiento al día'}
                     </span>
@@ -239,15 +258,17 @@ export default function DoctorPatientsView({
 
               {/* Botones de acción del paciente (HU 1 y HU 3) */}
               <div className="patient-detail-actions">
-                <button
-                  type="button"
-                  className="action-btn action-btn--secondary"
-                  onClick={() => openEditModal(currentPatient)}
-                  title="Editar datos del paciente (HU 1)"
-                >
-                  <Pencil size={18} />
-                  <span>Editar</span>
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="action-btn action-btn--secondary"
+                    onClick={() => openEditModal(currentPatient)}
+                    title="Editar datos del paciente (HU 1)"
+                  >
+                    <Pencil size={18} />
+                    <span>Editar</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="emergency-trigger-btn"
@@ -364,7 +385,7 @@ export default function DoctorPatientsView({
       </section>
 
       {/* Modal para Crear Paciente (HU 1) */}
-      {isCreatingPatient && (
+      {!readOnly && isCreatingPatient && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <header className="modal-header">
@@ -389,6 +410,20 @@ export default function DoctorPatientsView({
                   placeholder="Ej: Mateo Ibañez"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>DNI del paciente *</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  pattern="[0-9. ]{7,10}"
+                  placeholder="Solo usar un DNI ficticio"
+                  value={dni}
+                  onChange={(event) => setDni(event.target.value)}
                   required
                 />
               </label>
@@ -419,35 +454,25 @@ export default function DoctorPatientsView({
               <div className="form-two-col">
                 <label>
                   <span>Tutor 1 (obligatorio) *</span>
-                  <select
+                  <TutorSearchSelect
+                    token={token}
                     value={idTutor1}
-                    onChange={(e) => setIdTutor1(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccionar tutor…</option>
-                    {tutors.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.nombre}{t.telefono ? ` · ${t.telefono}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setIdTutor1}
+                    excludeId={idTutor2}
+                    demoTutors={demoTutors}
+                  />
                 </label>
 
                 <label>
                   <span>Tutor 2 (opcional)</span>
-                  <select
+                  <TutorSearchSelect
+                    token={token}
                     value={idTutor2}
-                    onChange={(e) => setIdTutor2(e.target.value)}
-                  >
-                    <option value="">Sin segundo tutor</option>
-                    {tutors
-                      .filter((t) => String(t.id) !== idTutor1)
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.nombre}{t.telefono ? ` · ${t.telefono}` : ''}
-                        </option>
-                      ))}
-                  </select>
+                    onChange={setIdTutor2}
+                    excludeId={idTutor1}
+                    demoTutors={demoTutors}
+                    placeholder="Buscar segundo tutor por nombre o DNI..."
+                  />
                 </label>
               </div>
 
@@ -494,7 +519,7 @@ export default function DoctorPatientsView({
       )}
 
       {/* Modal para Editar Paciente (HU 1) */}
-      {isEditingPatient && (
+      {!readOnly && isEditingPatient && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <header className="modal-header">
@@ -518,6 +543,20 @@ export default function DoctorPatientsView({
                   type="text"
                   value={editNombre}
                   onChange={(e) => setEditNombre(e.target.value)}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>DNI del paciente *</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  pattern="[0-9. ]{7,10}"
+                  placeholder="Solo usar un DNI ficticio"
+                  value={editDni}
+                  onChange={(event) => setEditDni(event.target.value)}
                   required
                 />
               </label>
@@ -548,35 +587,37 @@ export default function DoctorPatientsView({
               <div className="form-two-col">
                 <label>
                   <span>Tutor 1 (obligatorio) *</span>
-                  <select
+                  <TutorSearchSelect
+                    token={token}
                     value={editIdTutor1}
-                    onChange={(e) => setEditIdTutor1(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccionar tutor…</option>
-                    {tutors.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.nombre}{t.telefono ? ` · ${t.telefono}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setEditIdTutor1}
+                    selectedTutor={{
+                      id: editIdTutor1,
+                      nombre: currentPatient.tutor1Nombre,
+                      dni: currentPatient.tutor1Dni,
+                      telefono: currentPatient.tutor1Telefono,
+                    }}
+                    excludeId={editIdTutor2}
+                    demoTutors={demoTutors}
+                  />
                 </label>
 
                 <label>
                   <span>Tutor 2 (opcional)</span>
-                  <select
+                  <TutorSearchSelect
+                    token={token}
                     value={editIdTutor2}
-                    onChange={(e) => setEditIdTutor2(e.target.value)}
-                  >
-                    <option value="">Sin segundo tutor</option>
-                    {tutors
-                      .filter((t) => String(t.id) !== editIdTutor1)
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.nombre}{t.telefono ? ` · ${t.telefono}` : ''}
-                        </option>
-                      ))}
-                  </select>
+                    onChange={setEditIdTutor2}
+                    selectedTutor={{
+                      id: editIdTutor2,
+                      nombre: currentPatient.tutor2Nombre,
+                      dni: currentPatient.tutor2Dni,
+                      telefono: currentPatient.tutor2Telefono,
+                    }}
+                    excludeId={editIdTutor1}
+                    demoTutors={demoTutors}
+                    placeholder="Buscar segundo tutor por nombre o DNI..."
+                  />
                 </label>
               </div>
 
@@ -624,4 +665,3 @@ export default function DoctorPatientsView({
     </div>
   )
 }
-

@@ -24,11 +24,13 @@ El paciente es un registro del sistema, no un usuario ni un actor con inicio de 
 
 - El frontend ofrece login y registro conectados a la API. El registro cambia sus campos según el rol; la sesión se mantiene en `sessionStorage` y el dashboard carga los pacientes permitidos.
 - **Familia:** Resumen, Mis hijos, Turnos, Historial clínico y Notificaciones.
-- **Médico:** Resumen, Pacientes, Agenda, Consultas e Indicadores.
-- **Enfermería:** Resumen, Medicación, Recordatorios, Pacientes y Administraciones.
-- El backend Express expone autenticación JWT (`/api/auth`) y endpoints protegidos de lectura/alta de pacientes (`/api/patients`), además de los chequeos `GET /api/health` y `GET /api/health/database`.
-- El esquema MySQL está definido en `db/pedia_care.sql`; incluye usuarios y perfiles, pacientes, historias, consultas, medicación, recordatorios, notificaciones, turnos y vacunas.
-- Todavía no hay endpoints para turnos, consultas, medicación, vacunas ni notificaciones. No cargar datos clínicos reales en esta versión del proyecto.
+- **Médico:** Resumen, Pacientes, Agenda, Consultas, Recordatorios e Indicadores.
+- **Enfermería:** Resumen, Medicación, Recordatorios, Pacientes y Administraciones; sus recordatorios se asignan entre enfermeros activos procurando equilibrar la carga.
+- La API protegida permite administrar pacientes, consultas, turnos, medicación, recordatorios, vacunas y notificaciones según el rol.
+- Los avisos se muestran dentro de la aplicación. Las solicitudes de turno quedan pendientes de confirmación profesional; no se envían correos ni SMS.
+- Usuarios y pacientes tienen DNI único por tabla. Las altas nuevas lo requieren y las búsquedas de pacientes usan nombre o DNI; los IDs quedan como referencias internas.
+- El esquema MySQL está definido en `db/pedia_care.sql`; las migraciones `db/migrations/001_clinical_workflows.sql`, `002_person_dni.sql` y `003_reminder_assignments.sql` actualizan bases anteriores.
+- Es un prototipo educativo. Usar únicamente datos ficticios: no cargar información personal ni clínica real, ni utilizarlo para tomar decisiones de atención.
 
 ## Estructura
 
@@ -82,11 +84,12 @@ Copy-Item backend/.env.example backend/.env
 Editar `backend/.env` con las credenciales de tu servidor MySQL local (`DB_USER`, `DB_PASSWORD`, etc.). El puerto de la API está configurado por defecto en `PORT=3001` para evitar conflictos con otros servicios locales.
 
 ```powershell
-# 3. Inicializar la base de datos ejecutando el script SQL
-# (puedes usar MySQL Workbench, la CLI de mysql o tu cliente preferido)
-# mysql -u root -p < db/pedia_care.sql
+# 3. Crear el esquema vacío ejecutando db/pedia_care.sql
+#    desde MySQL Workbench o tu cliente MySQL preferido.
+# 4. (Opcional) En una base nueva y sin datos, cargar los datos ficticios
+#    ejecutando db/pedia_care_datos_prueba.sql una sola vez.
 
-# 4. Iniciar la aplicación completa (Frontend + Backend en paralelo)
+# 5. Iniciar la aplicación completa (Frontend + Backend en paralelo)
 npm run dev
 ```
 
@@ -103,7 +106,7 @@ npm run dev:frontend
 npm run dev:backend
 ```
 
-Para verificar que el proceso de la API está activo, abrir `http://localhost:3000/api/health`. Para comprobar también MySQL, abrir `http://localhost:3000/api/health/database`.
+Para verificar que el proceso de la API está activo, abrir `http://localhost:3001/api/health`. Para comprobar también MySQL, abrir `http://localhost:3001/api/health/database`.
 
 Cuando MySQL esté iniciado, la respuesta de diagnóstico es:
 
@@ -111,7 +114,7 @@ Cuando MySQL esté iniciado, la respuesta de diagnóstico es:
 { "status": "ok", "database": "connected" }
 ```
 
-## API inicial
+## API
 
 Todas las respuestas de pacientes requieren `Authorization: Bearer <token>`. Los tokens vencen en una hora y se comprueba que la cuenta y su perfil sigan activos.
 
@@ -122,7 +125,20 @@ Todas las respuestas de pacientes requieren `Authorization: Bearer <token>`. Los
 - `GET /api/patients/:patientId`: consulta una ficha según el mismo alcance de acceso.
 - `POST /api/patients`: solo médico; crea paciente e historia clínica en una única transacción. El cuerpo usa `nombre`, `fechaNacimiento`, `sexo`, `idTutor1` y opcionalmente `idTutor2`, `alergias` y `enfermedadesCronicas`.
 
-Las cuentas pueden crearse desde el formulario de registro. Las de médico/enfermería requieren un código que solo administra el servidor; no se permite elegir esos roles sin habilitación. Para alta local también está `npm run user:create`. Las contraseñas se almacenan con bcrypt. El próximo paso funcional es agregar endpoints de turnos y medicación con permisos por rol.
+Además, la API ofrece:
+
+- `PUT /api/patients/:patientId` para actualizar fichas; `GET /api/patients/tutors` para listar tutores (médicos).
+- Consultas: `GET/POST /api/consultations`, `PUT/DELETE /api/consultations/:consultationId` y métricas para médicos en `GET /api/consultations/metrics`. Las familias pueden leer el historial y las indicaciones destinadas a ellas.
+- Turnos: profesionales disponibles en `GET /api/appointments/doctors`; las familias solicitan (`POST /api/appointments`) o cancelan (`PATCH /api/appointments/:appointmentId/cancel`) turnos; personal profesional consulta y cambia su estado. Las solicitudes quedan pendientes de confirmación.
+- Medicación y recordatorios en `/api/clinical/medications` y `/api/clinical/reminders`; enfermería registra planes y administra/omite dosis. Los recordatorios se generan en una ventana móvil de 30 días y los planes duran como máximo 365 días.
+- Vacunas en `/api/clinical/vaccines`; médico y enfermería pueden registrar y actualizar aplicaciones.
+- Notificaciones en `/api/notifications`; familias gestionan sus preferencias con `/api/notifications/preferences`. Los avisos son solo dentro de la app; no hay correo ni SMS.
+
+`db/pedia_care_datos_prueba.sql` contiene usuarios y registros clínicos sintéticos con DNI ficticios. Ejecutarlo una sola vez y únicamente sobre una base recién creada y sin datos; usa IDs fijos, no sirve para reiniciar una instalación y no debe ejecutarse sobre una base que contenga información a conservar.
+
+Para una base ya creada, ejecutar las migraciones que aún no se aplicaron en orden (`001_clinical_workflows.sql`, `002_person_dni.sql` y `003_reminder_assignments.sql`). Si ya ejecutaste las migraciones 001 y 002, aplicá solo la 003. No ejecutes migraciones en una instalación nueva inicializada desde `db/pedia_care.sql`, ya que el esquema incluye los cambios. La migración del DNI asigna valores ficticios únicamente a registros de prueba reconocibles por sus correos `.test`; los demás quedan con DNI nulo. Completá el DNI de cada paciente desde su ficha. El prototipo no permite editar el DNI de cuentas ya existentes: si necesitás completarlo en una cuenta, actualizá el campo directamente en MySQL con un valor ficticio.
+
+Las cuentas pueden crearse desde el formulario de registro. Las de médico/enfermería requieren códigos de habilitación del servidor. Para alta local también está `npm run user:create`. Las contraseñas se almacenan con bcrypt.
 
 ## Comandos útiles
 

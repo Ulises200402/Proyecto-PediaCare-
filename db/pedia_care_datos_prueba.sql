@@ -9,6 +9,7 @@ START TRANSACTION;
 --      15-24 -> ENFERMERO
 --      25-34 -> PADRE_MADRE (tutores)
 --    contrasena_hash: mismo hash bcrypt para los 30 usuarios (solo para pruebas).
+--    DNI: valores ficticios asignados debajo, nunca usar documentos reales.
 -- =====================================================================
 INSERT INTO usuario (id_usuario, nombre, email, contrasena_hash, rol) VALUES
 -- Médicos
@@ -44,6 +45,10 @@ INSERT INTO usuario (id_usuario, nombre, email, contrasena_hash, rol) VALUES
 (32, 'Silvana Ramírez',         'silvana.ramirez@correo.test',        '$2b$12$5OwdEPzAfiue07SM24U7.OOvw7JkcF2nKx8LmYiul8sSV9ELBd3Xe', 'PADRE_MADRE'),
 (33, 'Leandro Flores',          'leandro.flores@correo.test',         '$2b$12$5OwdEPzAfiue07SM24U7.OOvw7JkcF2nKx8LmYiul8sSV9ELBd3Xe', 'PADRE_MADRE'),
 (34, 'Paula Gutiérrez',         'paula.gutierrez@correo.test',        '$2b$12$5OwdEPzAfiue07SM24U7.OOvw7JkcF2nKx8LmYiul8sSV9ELBd3Xe', 'PADRE_MADRE');
+
+UPDATE usuario
+SET dni = LPAD(90000000 + id_usuario, 8, '0')
+WHERE id_usuario BETWEEN 5 AND 34;
 
 -- =====================================================================
 -- 2) MEDICO (id_usuario 5-14)
@@ -106,6 +111,94 @@ INSERT INTO paciente (nombre, fecha_nacimiento, sexo, alergias, enfermedades_cro
 ('Catalina Ramírez',   '2024-04-12', 'Femenino',        'Huevo',                 NULL, 32, 31),
 ('Joaquín Flores',     '2016-12-03', 'Masculino',       NULL,                    NULL, 33, 34),
 ('Isabella Gutiérrez', '2021-08-19', 'No especificado', 'Amoxicilina',           'Dermatitis atópica', 34, 33);
+
+UPDATE paciente
+SET dni = CONCAT('92', LPAD(id_paciente, 6, '0'))
+WHERE id_tutor_1 BETWEEN 25 AND 34;
+
+-- =====================================================================
+-- 6) HISTORIAS CLÍNICAS Y DATOS PARA PROBAR LOS FLUJOS DE LA APP
+-- =====================================================================
+INSERT INTO historial_clinico (id_paciente)
+SELECT p.id_paciente
+FROM paciente AS p
+WHERE p.id_tutor_1 BETWEEN 25 AND 34
+  AND NOT EXISTS (
+    SELECT 1 FROM historial_clinico AS h WHERE h.id_paciente = p.id_paciente
+  );
+
+INSERT INTO consulta
+    (id_historial, id_medico, fecha_consulta, motivo, diagnostico, tratamiento, observaciones,
+     indicaciones_para_padres)
+SELECT h.id_historial, 5, DATE_SUB(NOW(), INTERVAL 3 DAY),
+       'Control pediátrico', 'Evolución general favorable', 'Continuar controles habituales',
+       'Sin incidencias relevantes.', 'La evolución es favorable. Mantener los controles programados.'
+FROM historial_clinico AS h
+INNER JOIN paciente AS p ON p.id_paciente = h.id_paciente
+WHERE p.nombre = 'Mateo Pereyra';
+
+INSERT INTO consulta
+    (id_historial, id_medico, fecha_consulta, motivo, diagnostico, tratamiento, observaciones,
+     indicaciones_para_padres)
+SELECT h.id_historial, 6, DATE_SUB(NOW(), INTERVAL 1 DAY),
+       'Seguimiento respiratorio', 'Asma leve en seguimiento', 'Según indicación profesional',
+       'Control de seguimiento.', 'Seguir las indicaciones del equipo médico y asistir al próximo control.'
+FROM historial_clinico AS h
+INNER JOIN paciente AS p ON p.id_paciente = h.id_paciente
+WHERE p.nombre = 'Valentina López';
+
+INSERT INTO medicacion
+    (id_paciente, id_enfermero, nombre, dosis, via_administracion, frecuencia, horarios,
+     indicaciones, fecha_inicio, fecha_fin)
+SELECT p.id_paciente, 15, 'Medicamento de prueba', 'Dosis según indicación',
+       'Oral', 'Cada 12 horas', JSON_ARRAY('09:00', '21:00'),
+       'Registro ficticio para probar la interfaz.', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 14 DAY)
+FROM paciente AS p
+WHERE p.nombre = 'Mateo Pereyra';
+
+INSERT INTO medicacion
+    (id_paciente, id_enfermero, nombre, dosis, via_administracion, frecuencia, horarios,
+     indicaciones, fecha_inicio, fecha_fin)
+SELECT p.id_paciente, 16, 'Tratamiento de demostración', 'Dosis de ejemplo',
+       'Oral', 'Diaria (cada 24 horas)', JSON_ARRAY('12:00'),
+       'Dato ficticio de demostración.', CURDATE(), NULL
+FROM paciente AS p
+WHERE p.nombre = 'Valentina López';
+
+INSERT INTO vacuna
+    (id_paciente, id_medico, nombre, dosis, fecha_aplicacion, proxima_dosis, estado, observaciones)
+SELECT p.id_paciente, 5, 'Vacuna de ejemplo A', '1.ª dosis',
+       DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_ADD(CURDATE(), INTERVAL 150 DAY),
+       'Aplicada', 'Dato ficticio para validar el historial de vacunación.'
+FROM paciente AS p
+WHERE p.nombre = 'Mateo Pereyra';
+
+INSERT INTO vacuna
+    (id_paciente, id_enfermero, nombre, dosis, fecha_aplicacion, proxima_dosis, estado, observaciones)
+SELECT p.id_paciente, 15, 'Vacuna de ejemplo B', 'Refuerzo',
+       NULL, DATE_ADD(CURDATE(), INTERVAL 7 DAY), 'Pendiente',
+       'Dato ficticio para probar avisos de próximas dosis.'
+FROM paciente AS p
+WHERE p.nombre = 'Valentina López';
+
+INSERT INTO turno (id_paciente, id_medico, fecha_hora, motivo, estado)
+SELECT p.id_paciente, 5, DATE_ADD(NOW(), INTERVAL 2 DAY),
+       'Control pediátrico de prueba', 'Programado'
+FROM paciente AS p
+WHERE p.nombre = 'Mateo Pereyra';
+
+INSERT INTO turno (id_paciente, id_medico, fecha_hora, motivo, estado)
+SELECT p.id_paciente, 6, DATE_ADD(NOW(), INTERVAL 4 DAY),
+       'Seguimiento de prueba', 'Confirmado'
+FROM paciente AS p
+WHERE p.nombre = 'Valentina López';
+
+INSERT INTO notificacion (id_usuario, id_paciente, canal, tipo, contenido, estado)
+SELECT 25, p.id_paciente, 'APP', 'general',
+       'Notificación ficticia: los datos de prueba están cargados correctamente.',
+       'Enviada'
+FROM paciente AS p
+WHERE p.nombre = 'Mateo Pereyra';
 
 COMMIT;
 

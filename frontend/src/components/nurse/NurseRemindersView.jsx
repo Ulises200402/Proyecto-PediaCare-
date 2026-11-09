@@ -11,19 +11,25 @@ import {
 
 export default function NurseRemindersView({
   reminders,
+  patients = [],
+  nurses = [],
   onAdministerDose,
   onOmitDose,
+  onAssignReminder,
   onOpenEmergencyModal,
+  canAdminister = true,
+  canAssignReminders = false,
 }) {
   const [filter, setFilter] = useState('ALL') // 'ALL' | 'Pendiente' | 'Administrada'
   const [warningModalReminder, setWarningModalReminder] = useState(null)
   const [warningType, setWarningType] = useState('DUPLICATE') // 'DUPLICATE' | 'OFF_SCHEDULE'
   const [omitModalReminder, setOmitModalReminder] = useState(null)
   const [omitReason, setOmitReason] = useState('Orden médica de suspensión')
+  const [assignmentErrors, setAssignmentErrors] = useState({})
 
   // Dosis con alerta visible de atención urgente / horario cumplido (HU 5)
   const pendingUrgentReminders = reminders.filter(
-    (r) => r.estado === 'Pendiente' && r.esAlertaUrgente
+    (r) => canAdminister && r.estado === 'Pendiente' && r.esAlertaUrgente
   )
 
   const filteredReminders = reminders.filter((r) => {
@@ -41,9 +47,13 @@ export default function NurseRemindersView({
     }
 
     // Verificar si es un horario muy lejano o fuera de hora
-    const currentHour = 9 // Hora actual simulada
-    const reminderHour = parseInt(reminder.horario.split(':')[0], 10)
-    if (reminderHour > currentHour + 3) {
+    const scheduledAt = reminder.fechaHoraProgramada
+      ? new Date(String(reminder.fechaHoraProgramada).replace(' ', 'T'))
+      : null
+    const hoursUntilScheduled = scheduledAt
+      ? (scheduledAt.getTime() - Date.now()) / 3600000
+      : 0
+    if (hoursUntilScheduled > 3) {
       setWarningType('OFF_SCHEDULE')
       setWarningModalReminder(reminder)
       return
@@ -51,6 +61,14 @@ export default function NurseRemindersView({
 
     // Ejecutar administración directa
     onAdministerDose(reminder.id)
+  }
+
+  async function handleAssignmentChange(reminder, value) {
+    const result = await onAssignReminder(reminder.id, value ? Number(value) : null)
+    setAssignmentErrors((previous) => ({
+      ...previous,
+      [reminder.id]: result?.ok ? '' : result?.error || 'No se pudo cambiar la asignación.',
+    }))
   }
 
   function confirmWarningAdministration() {
@@ -70,7 +88,7 @@ export default function NurseRemindersView({
   return (
     <div className="reminders-view">
       {/* HU 5: Muestra alertas visibles cuando corresponde administrar medicación */}
-      {pendingUrgentReminders.length > 0 && (
+      {canAdminister && pendingUrgentReminders.length > 0 && (
         <section className="nurse-active-alert-banner">
           <div className="alert-banner-icon">
             <Bell size={24} className="bell-ring-animation" />
@@ -138,7 +156,12 @@ export default function NurseRemindersView({
             >
               <div className="reminder-time-col">
                 <Clock size={18} />
-                <span className="reminder-time">{rem.horario}</span>
+                <span className="reminder-time">
+                  {rem.horario}
+                  {rem.fechaHoraProgramada && (
+                    <small>{new Date(String(rem.fechaHoraProgramada).replace(' ', 'T')).toLocaleDateString('es-AR')}</small>
+                  )}
+                </span>
                 <span className={`status-pill status-pill--${isDone ? 'good' : isOmitted ? 'danger' : 'attention'}`}>
                   {rem.estado}
                 </span>
@@ -151,7 +174,9 @@ export default function NurseRemindersView({
                   </span>
                   <div>
                     <strong>{rem.pacienteNombre}</strong>
-                    <span className="reminder-patient-id">ID #{rem.idPaciente}</span>
+                    <span className="reminder-patient-id">
+                      DNI {rem.dni || patients.find((patient) => patient.id === rem.idPaciente)?.dni || 'pendiente'}
+                    </span>
                   </div>
                 </div>
 
@@ -162,6 +187,37 @@ export default function NurseRemindersView({
                     <span className="reminder-dose">Dosis exacta: <strong>{rem.dosis}</strong></span>
                   </div>
                 </div>
+
+                {canAssignReminders && rem.estado === 'Pendiente' ? (
+                  <label className="reminder-assignment">
+                    <span>Enfermera responsable</span>
+                    <select
+                      value={rem.idEnfermeroAsignado || ''}
+                      disabled={rem.estado !== 'Pendiente' || (!nurses.length && !rem.idEnfermeroAsignado)}
+                      onChange={(event) => handleAssignmentChange(rem, event.target.value)}
+                    >
+                      {!rem.idEnfermeroAsignado && (
+                        <option value="" disabled>Sin asignar</option>
+                      )}
+                      {rem.idEnfermeroAsignado &&
+                        !nurses.some((nurse) => nurse.id === rem.idEnfermeroAsignado) && (
+                          <option value={rem.idEnfermeroAsignado}>
+                            {rem.enfermeroAsignado || 'Enfermera inactiva'}
+                          </option>
+                        )}
+                      {nurses.map((nurse) => (
+                        <option key={nurse.id} value={nurse.id}>{nurse.nombre}</option>
+                      ))}
+                    </select>
+                    {assignmentErrors[rem.id] && (
+                      <span className="form-error" role="alert">{assignmentErrors[rem.id]}</span>
+                    )}
+                  </label>
+                ) : canAssignReminders ? (
+                  <p className="reminder-assignment-summary">
+                    Responsable: {rem.enfermeroAsignado || rem.enfermero || 'Sin asignar'}
+                  </p>
+                ) : null}
 
                 {rem.observaciones && (
                   <p className="reminder-notes">
@@ -185,7 +241,7 @@ export default function NurseRemindersView({
               </div>
 
               <div className="reminder-actions-col">
-                {!isDone && !isOmitted ? (
+                {canAdminister && !isDone && !isOmitted ? (
                   <>
                     <button
                       type="button"
@@ -202,7 +258,7 @@ export default function NurseRemindersView({
                       Omitir dosis
                     </button>
                   </>
-                ) : (
+                ) : canAdminister ? (
                   <button
                     type="button"
                     className="action-btn action-btn--secondary action-btn--small"
@@ -211,7 +267,7 @@ export default function NurseRemindersView({
                   >
                     Repetir registro
                   </button>
-                )}
+                ) : null}
 
                 {onOpenEmergencyModal && (
                   <button
@@ -341,4 +397,3 @@ export default function NurseRemindersView({
     </div>
   )
 }
-

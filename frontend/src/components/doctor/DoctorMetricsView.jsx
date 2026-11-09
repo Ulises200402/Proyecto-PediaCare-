@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import {
   Activity,
   BarChart3,
@@ -7,23 +6,27 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
-import { getDoctorMetrics } from '../../services/api.js'
 
-export default function DoctorMetricsView({ consultations, patients, token, isDemo }) {
-  const [metrics, setMetrics] = useState(null)
+export default function DoctorMetricsView({ consultations, metrics, isDemo }) {
 
-  useEffect(() => {
-    if (!token || isDemo) return
-    getDoctorMetrics(token)
-      .then(({ data }) => {
-        if (data) setMetrics(data)
-      })
-      .catch(() => {})
-  }, [token, isDemo])
-
-  const consultasMes = metrics ? metrics.totalConsultasMes : consultations.length
-  const consultasHoy = metrics ? metrics.consultasHoy : consultations.filter((c) => c.esHoy).length
-  const pacientesDistintos = metrics ? metrics.pacientesDistintos : (patients.length || 0)
+  const now = new Date()
+  const isCurrentMonth = (consultation) => {
+    const date = new Date(String(consultation.fechaConsulta).replace(' ', 'T'))
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+  }
+  const isPreviousMonth = (consultation) => {
+    const date = new Date(String(consultation.fechaConsulta).replace(' ', 'T'))
+    const previous = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    return date.getFullYear() === previous.getFullYear() && date.getMonth() === previous.getMonth()
+  }
+  const consultasMes = metrics?.totalConsultasMes ??
+    consultations.filter(isCurrentMonth).length
+  const consultasHoy = metrics?.consultasHoy ??
+    consultations.filter((consultation) => consultation.esHoy).length
+  const pacientesDistintos = metrics?.pacientesDistintos ??
+    new Set(consultations.filter(isCurrentMonth).map((consultation) => consultation.idPaciente)).size
+  const consultasMesAnterior = metrics?.consultasMesAnterior ??
+    consultations.filter(isPreviousMonth).length
 
   const motivos = metrics && metrics.motivosFrecuentes.length > 0
     ? metrics.motivosFrecuentes.map((m) => ({
@@ -31,14 +34,10 @@ export default function DoctorMetricsView({ consultations, patients, token, isDe
         count: m.count,
         percentage: Math.round((m.count / Math.max(1, consultasMes)) * 100),
       }))
-    : [
-        { label: 'Controles de rutina y desarrollo', count: Math.max(1, Math.round(consultasMes * 0.5)), percentage: 50 },
-        { label: 'Infecciones respiratorias agudas', count: Math.max(1, Math.round(consultasMes * 0.3)), percentage: 30 },
-        { label: 'Otros motivos y seguimientos', count: Math.max(1, Math.round(consultasMes * 0.2)), percentage: 20 },
-      ]
+    : []
 
   const evolucionMensual = [
-    { mes: 'Mes anterior', total: Math.max(0, consultasMes - 5) },
+    { mes: 'Mes anterior', total: consultasMesAnterior },
     { mes: 'Mes actual', total: consultasMes, actual: true },
   ]
 
@@ -50,7 +49,7 @@ export default function DoctorMetricsView({ consultations, patients, token, isDe
           <span>CONSULTAS REALIZADAS EN EL MES</span>
           <strong>{consultasMes}</strong>
           <small className="metric-item__positive">
-            <TrendingUp size={14} /> {isDemo ? '+12% respecto al mes previo' : 'Datos reales de MySQL'}
+            <TrendingUp size={14} /> {isDemo ? 'Datos ficticios de demostración' : 'Datos de la API'}
           </small>
         </div>
         <div className="metric-item">
@@ -69,10 +68,8 @@ export default function DoctorMetricsView({ consultations, patients, token, isDe
         </div>
         <div className="metric-item">
           <span>CERTIFICADOS Y APTITUDES</span>
-          <strong>{Math.round(consultasMes * 0.2)}</strong>
-          <small className="metric-item__positive">
-            <FileCheck size={14} /> Al día
-          </small>
+          <strong>{motivos.length}</strong>
+          <small><FileCheck size={14} /> Motivos distintos registrados</small>
         </div>
       </section>
 
@@ -82,7 +79,7 @@ export default function DoctorMetricsView({ consultations, patients, token, isDe
           <header className="data-panel__heading panel-title-row">
             <div>
               <span className="section-kicker">EVOLUCIÓN CLÍNICA</span>
-              <h2>Consultas por Mes (Datos Reales)</h2>
+              <h2>Comparación mensual</h2>
             </div>
             <BarChart3 size={20} />
           </header>
@@ -122,7 +119,9 @@ export default function DoctorMetricsView({ consultations, patients, token, isDe
           </header>
 
           <div className="progress-list">
-            {motivos.map((diag) => (
+            {motivos.length === 0 ? (
+              <p className="empty-panel">Todavía no hay motivos de consulta registrados este mes.</p>
+            ) : motivos.map((diag) => (
               <div className="progress-item" key={diag.label}>
                 <div className="progress-item__info">
                   <strong>{diag.label}</strong>
@@ -142,5 +141,3 @@ export default function DoctorMetricsView({ consultations, patients, token, isDe
     </div>
   )
 }
-
-

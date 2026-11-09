@@ -7,16 +7,20 @@ import {
   ShieldAlert,
   X,
   AlertTriangle,
+  Edit2,
 } from 'lucide-react'
 
 export default function NurseMedicationView({
   medications,
   patients,
   onAddMedication,
+  onUpdateMedication,
   onOpenEmergencyModal,
+  readOnly = false,
 }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingMedication, setEditingMedication] = useState(null)
 
   // Form states para Cargar Medicación (HU 5)
   const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id || '')
@@ -28,27 +32,66 @@ export default function NurseMedicationView({
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10))
   const [fechaFin, setFechaFin] = useState('')
   const [indicaciones, setIndicaciones] = useState('')
+  const [registrationCode, setRegistrationCode] = useState('')
+  const [formError, setFormError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const filteredMedications = medications.filter((m) => {
     if (!searchTerm) return true
     const term = searchTerm.toLowerCase()
     return (
       m.medicamento.toLowerCase().includes(term) ||
-      m.pacienteNombre.toLowerCase().includes(term)
+      m.pacienteNombre.toLowerCase().includes(term) ||
+      String(m.dni || patients.find((patient) => patient.id === m.idPaciente)?.dni || '')
+        .includes(term.replace(/[.\s]/g, ''))
     )
   })
 
   // Obtener advertencia si el paciente tiene alergias
-  const currentPatientObj = patients.find((p) => p.id === Number(selectedPatientId))
+  const activePatientId = selectedPatientId || String(patients[0]?.id || '')
+  const currentPatientObj = patients.find((p) => p.id === Number(activePatientId))
 
-  function handleFormSubmit(e) {
+  function openCreateModal() {
+    setEditingMedication(null)
+    setSelectedPatientId(patients[0]?.id || '')
+    setMedicamento('')
+    setDosis('')
+    setVia('Oral')
+    setFrecuencia('Cada 8 horas')
+    setHorariosStr('08:00, 16:00, 00:00')
+    setFechaInicio(new Date().toISOString().slice(0, 10))
+    setFechaFin('')
+    setIndicaciones('')
+    setRegistrationCode('')
+    setFormError('')
+    setIsModalOpen(true)
+  }
+
+  function openEditModal(medication) {
+    setEditingMedication(medication)
+    setSelectedPatientId(String(medication.idPaciente))
+    setMedicamento(medication.medicamento)
+    setDosis(medication.dosis)
+    setVia(medication.via)
+    setFrecuencia(medication.frecuencia)
+    setHorariosStr((medication.horarios || []).join(', '))
+    setFechaInicio(medication.fechaInicio)
+    setFechaFin(medication.fechaFin || '')
+    setIndicaciones(medication.indicaciones || '')
+    setRegistrationCode('')
+    setFormError('')
+    setIsModalOpen(true)
+  }
+
+  async function handleFormSubmit(e) {
     e.preventDefault()
-    const patientObj = patients.find((p) => p.id === Number(selectedPatientId))
+    setFormError('')
+    const patientObj = patients.find((p) => p.id === Number(activePatientId))
     const parsedHorarios = horariosStr.split(',').map((h) => h.trim()).filter(Boolean)
 
     const newMed = {
       id: Date.now(),
-      idPaciente: Number(selectedPatientId),
+      idPaciente: Number(activePatientId),
       pacienteNombre: patientObj?.nombre || 'Paciente',
       medicamento,
       dosis,
@@ -63,8 +106,21 @@ export default function NurseMedicationView({
       enfermeroNombre: 'Enf. Lautaro Altamirano',
     }
 
-    onAddMedication(newMed)
+    setIsSaving(true)
+    const result = editingMedication
+      ? await onUpdateMedication({
+          ...newMed,
+          id: editingMedication.id,
+          activa: editingMedication.activa,
+        }, registrationCode)
+      : await onAddMedication(newMed)
+    setIsSaving(false)
+    if (!result?.ok) {
+      setFormError(result?.error || 'No se pudo guardar el plan de medicación.')
+      return
+    }
     setIsModalOpen(false)
+    setRegistrationCode('')
 
     // Reset
     setMedicamento('')
@@ -88,14 +144,17 @@ export default function NurseMedicationView({
           <span className="section-kicker">CONTROL FARMACOLÓGICO</span>
           <h2>Planes de Medicación Activos ({medications.length})</h2>
         </div>
-        <button
-          type="button"
-          className="action-btn action-btn--primary"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus size={16} />
-          <span>Cargar Medicación</span>
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            className="action-btn action-btn--primary"
+            onClick={openCreateModal}
+            disabled={!patients.length}
+          >
+            <Plus size={16} />
+            <span>Cargar Medicación</span>
+          </button>
+        )}
       </div>
 
       <div className="consultations-toolbar">
@@ -131,7 +190,7 @@ export default function NurseMedicationView({
                     </span>
                     <div>
                       <strong>{med.pacienteNombre}</strong>
-                      <small>#{med.idPaciente} · Vía {med.via}</small>
+                      <small>DNI {patientData?.dni || med.dni || 'pendiente'} · Vía {med.via}</small>
                     </div>
                   </div>
                   <span className="status-pill status-pill--good">
@@ -178,6 +237,15 @@ export default function NurseMedicationView({
 
                 <div className="med-plan-footer">
                   <span>Cargado por: {med.enfermeroNombre || 'Enfermería'}</span>
+                  {onUpdateMedication && !readOnly && (
+                    <button
+                      type="button"
+                      className="text-action"
+                      onClick={() => openEditModal(med)}
+                    >
+                      <Edit2 size={14} /> Editar
+                    </button>
+                  )}
                   {onOpenEmergencyModal && (
                     <button
                       type="button"
@@ -195,18 +263,21 @@ export default function NurseMedicationView({
       </div>
 
       {/* Modal Cargar Medicación (HU 5) */}
-      {isModalOpen && (
+      {!readOnly && isModalOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <header className="modal-header">
               <div>
                 <span className="section-kicker">ENFERMERÍA · HU 5</span>
-                <h2>Cargar Nueva Medicación</h2>
+                <h2>{editingMedication ? 'Editar plan de medicación' : 'Cargar Nueva Medicación'}</h2>
               </div>
               <button
                 type="button"
                 className="modal-close-btn"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setRegistrationCode('')
+                }}
               >
                 <X size={18} />
               </button>
@@ -216,16 +287,20 @@ export default function NurseMedicationView({
               <label>
                 <span>Paciente pediátrico *</span>
                 <select
-                  value={selectedPatientId}
+                  value={activePatientId}
                   onChange={(e) => setSelectedPatientId(e.target.value)}
+                  disabled={Boolean(editingMedication)}
                   required
                 >
                   {patients.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.nombre} (ID #{p.id} · {p.edad})
+                      {p.dni || 'DNI pendiente'} · {p.nombre} ({p.edad})
                     </option>
                   ))}
                 </select>
+                {editingMedication && (
+                  <small>Para asignar la medicación a otro paciente, finalizá este plan y creá uno nuevo.</small>
+                )}
               </label>
 
               {currentPatientObj?.alergias && currentPatientObj.alergias !== 'Sin alergias registradas' && (
@@ -246,6 +321,7 @@ export default function NurseMedicationView({
                     placeholder="Ej: Amoxicilina suspensión, Paracetamol jarabe..."
                     value={medicamento}
                     onChange={(e) => setMedicamento(e.target.value)}
+                    maxLength={100}
                     required
                   />
                 </label>
@@ -257,6 +333,7 @@ export default function NurseMedicationView({
                     placeholder="Ej: 5 ml (250 mg), 1 gota, 1 comprimido..."
                     value={dosis}
                     onChange={(e) => setDosis(e.target.value)}
+                    maxLength={100}
                     required
                   />
                 </label>
@@ -317,6 +394,7 @@ export default function NurseMedicationView({
                   <input
                     type="date"
                     value={fechaFin}
+                    min={fechaInicio}
                     onChange={(e) => setFechaFin(e.target.value)}
                   />
                 </label>
@@ -329,19 +407,55 @@ export default function NurseMedicationView({
                   placeholder="Tomar con agua, antes de comidas, controlar temperatura..."
                   value={indicaciones}
                   onChange={(e) => setIndicaciones(e.target.value)}
+                  maxLength={2000}
                 />
               </label>
+
+              {editingMedication && (
+                <label className="toggle-label">
+                  <span>Plan activo</span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingMedication.activa)}
+                    onChange={(event) => setEditingMedication({
+                      ...editingMedication,
+                      activa: event.target.checked,
+                    })}
+                  />
+                </label>
+              )}
+
+              {editingMedication && (
+                <label>
+                  <span>Código de registro de enfermería *</span>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={registrationCode}
+                    onChange={(event) => setRegistrationCode(event.target.value)}
+                    required
+                  />
+                  <small>Solicitá el código vigente al dueño del software para autorizar este cambio.</small>
+                </label>
+              )}
+
+              {formError && <p className="form-error" role="alert">{formError}</p>}
 
               <footer className="modal-footer">
                 <button
                   type="button"
                   className="action-btn action-btn--secondary"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setRegistrationCode('')
+                  }}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="action-btn action-btn--primary">
-                  Guardar Medicación y Generar Recordatorios
+                <button type="submit" className="action-btn action-btn--primary" disabled={isSaving}>
+                  {isSaving
+                    ? 'Guardando…'
+                    : editingMedication ? 'Guardar cambios' : 'Guardar medicación y recordatorios'}
                 </button>
               </footer>
             </form>
@@ -351,4 +465,3 @@ export default function NurseMedicationView({
     </div>
   )
 }
-

@@ -1551,7 +1551,13 @@
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  width: 100%;
   border-top: 1px solid #edf0eb;
+  cursor: pointer;
 }
 
 .attention-entry__dot {
@@ -4108,6 +4114,96 @@
   gap: 8px;
 }
 
+.reminder-assignment {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 240px);
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reminder-assignment select {
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--pine);
+}
+
+.reminder-assignment .form-error {
+  grid-column: 2;
+  margin: 0;
+}
+
+.reminder-assignment-summary {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.family-vaccine-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tutor-search-select {
+  position: relative;
+}
+
+.tutor-search-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgb(20 49 43 / 16%);
+}
+
+.tutor-search-options button {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--pine);
+  cursor: pointer;
+  text-align: left;
+}
+
+.tutor-search-options button:hover,
+.tutor-search-options button[aria-selected="true"] {
+  background: var(--paper);
+}
+
+.tutor-search-options button span,
+.tutor-search-message {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tutor-search-message {
+  margin: 0;
+  padding: 12px;
+}
+
+.tutor-search-message--error {
+  color: #b42318;
+}
+
 .warning-icon-badge {
   width: 56px;
   height: 56px;
@@ -4723,7 +4819,6 @@
 .empty-panel--compact {
   padding: 24px 12px;
 }
-
 
 /* ========================================= */
 /* NAVEGACIÓN MOBILE                       */
@@ -5435,6 +5530,25 @@
   }
 }
 
+.prototype-notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  color: #654b14;
+  background: #fff8e6;
+  border: 1px solid #f0d99b;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
 
-
+.form-error[role="alert"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #8a1f2d;
+}
 

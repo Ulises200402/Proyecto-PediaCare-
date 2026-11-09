@@ -5,6 +5,7 @@ import { validateNewPatient } from '../src/validators/patient.validator.js'
 test('accepts a patient with one or two distinct parent accounts', () => {
   const result = validateNewPatient({
     nombre: '  Sofía León  ',
+    dni: '12.345.678',
     fechaNacimiento: '2021-04-15',
     sexo: 'Femenino',
     idTutor1: 12,
@@ -14,6 +15,7 @@ test('accepts a patient with one or two distinct parent accounts', () => {
 
   assert.deepEqual(result.errors, undefined)
   assert.equal(result.value.nombre, 'Sofía León')
+  assert.equal(result.value.dni, '12345678')
   assert.equal(result.value.alergias, 'Penicilina')
   assert.equal(result.value.enfermedadesCronicas, null)
 })
@@ -21,6 +23,7 @@ test('accepts a patient with one or two distinct parent accounts', () => {
 test('rejects invalid dates, missing primary tutor, and duplicate tutors', () => {
   const result = validateNewPatient({
     nombre: 'Paciente',
+    dni: '12345678',
     fechaNacimiento: '2025-02-30',
     sexo: 'Femenino',
     idTutor1: 4,
@@ -35,9 +38,22 @@ test('rejects a future date of birth', () => {
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
   const result = validateNewPatient({
     nombre: 'Paciente',
+    dni: '12345678',
     fechaNacimiento: tomorrow,
     sexo: 'Otro',
     idTutor1: 4,
+  })
+
+  test('rejects a patient DNI with an invalid length', () => {
+    const result = validateNewPatient({
+      nombre: 'Paciente',
+      dni: '123456',
+      fechaNacimiento: '2021-04-15',
+      sexo: 'Otro',
+      idTutor1: 4,
+    })
+
+    assert.ok(result.errors.some((error) => error.includes('dni')))
   })
 
   assert.ok(result.errors.some((error) => error.includes('no futura')))

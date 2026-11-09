@@ -1,4 +1,11 @@
 -- Active: 1776624190935@@localhost@3306@primer_base_en_mac
+
+-- Esquema completo y actualizado para crear una instalación nueva de PediaCare+.
+-- Incluye los cambios de 001_clinical_workflows.sql, 002_person_dni.sql
+-- y 003_reminder_assignments.sql.
+-- Ejecutar solo en una base nueva; para bases existentes, aplicar las migraciones
+-- pendientes en orden y no volver a ejecutar este archivo.
+
 CREATE DATABASE IF NOT EXISTS pedia_care
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -7,10 +14,12 @@ USE pedia_care;
 CREATE TABLE usuario (
     id_usuario INT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
+    dni VARCHAR(8) NULL,
     email VARCHAR(254) NOT NULL UNIQUE,
     contrasena_hash VARCHAR(255) NOT NULL,
     rol ENUM('MEDICO', 'ENFERMERO', 'PADRE_MADRE') NOT NULL,
-    fecha_alta TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    fecha_alta TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX uq_usuario_dni (dni)
 ) ENGINE=InnoDB;
 
 CREATE TABLE medico (
@@ -36,6 +45,7 @@ CREATE TABLE padre_madre (
     recibe_notificaciones_app BOOLEAN NOT NULL DEFAULT TRUE,
     recibe_notificaciones_email BOOLEAN NOT NULL DEFAULT TRUE,
     recibe_notificaciones_sms BOOLEAN NOT NULL DEFAULT FALSE,
+    preferencias_notificacion JSON,
     CONSTRAINT fk_padre_madre_usuario FOREIGN KEY (id_usuario)
         REFERENCES usuario(id_usuario) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -43,6 +53,7 @@ CREATE TABLE padre_madre (
 CREATE TABLE paciente (
     id_paciente INT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
+    dni VARCHAR(8) NULL,
     fecha_nacimiento DATE NOT NULL,
     sexo ENUM('Femenino', 'Masculino', 'Otro', 'No especificado') NOT NULL,
     alergias TEXT,
@@ -56,7 +67,8 @@ CREATE TABLE paciente (
         REFERENCES padre_madre(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT fk_paciente_tutor_2 FOREIGN KEY (id_tutor_2)
         REFERENCES padre_madre(id_usuario) ON DELETE RESTRICT,
-    INDEX idx_paciente_nombre (nombre)
+    INDEX idx_paciente_nombre (nombre),
+    UNIQUE INDEX uq_paciente_dni (dni)
 ) ENGINE=InnoDB;
 
 CREATE TABLE historial_clinico (
@@ -76,6 +88,7 @@ CREATE TABLE consulta (
     diagnostico TEXT,
     tratamiento TEXT,
     observaciones TEXT,
+    indicaciones_para_padres TEXT,
     CONSTRAINT fk_consulta_historial FOREIGN KEY (id_historial)
         REFERENCES historial_clinico(id_historial) ON DELETE CASCADE,
     CONSTRAINT fk_consulta_medico FOREIGN KEY (id_medico)
@@ -89,6 +102,9 @@ CREATE TABLE medicacion (
     id_enfermero INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     dosis VARCHAR(100) NOT NULL,
+    via_administracion VARCHAR(30) NOT NULL DEFAULT 'Oral',
+    frecuencia VARCHAR(50) NOT NULL DEFAULT 'Según indicación',
+    horarios JSON,
     indicaciones TEXT,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE,
@@ -106,6 +122,8 @@ CREATE TABLE medicacion (
 CREATE TABLE recordatorio (
     id_recordatorio INT PRIMARY KEY AUTO_INCREMENT,
     id_medicacion INT NOT NULL,
+    id_enfermero INT,
+    id_enfermero_asignado INT,
     fecha_hora_programada DATETIME NOT NULL,
     estado ENUM('Pendiente', 'Administrada', 'Omitida') NOT NULL DEFAULT 'Pendiente',
     fecha_hora_administrada DATETIME,
@@ -114,7 +132,14 @@ CREATE TABLE recordatorio (
         (estado <> 'Administrada' OR fecha_hora_administrada IS NOT NULL),
     CONSTRAINT fk_recordatorio_medicacion FOREIGN KEY (id_medicacion)
         REFERENCES medicacion(id_medicacion) ON DELETE CASCADE,
-    INDEX idx_recordatorio_programado_estado (fecha_hora_programada, estado)
+    CONSTRAINT fk_recordatorio_enfermero FOREIGN KEY (id_enfermero)
+        REFERENCES enfermero(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_recordatorio_enfermero_asignado FOREIGN KEY (id_enfermero_asignado)
+        REFERENCES enfermero(id_usuario) ON DELETE SET NULL,
+    INDEX idx_recordatorio_programado_estado (fecha_hora_programada, estado),
+    INDEX idx_recordatorio_enfermero_asignado_fecha
+        (id_enfermero_asignado, fecha_hora_programada, estado),
+    UNIQUE INDEX uq_recordatorio_medicacion_fecha (id_medicacion, fecha_hora_programada)
 ) ENGINE=InnoDB;
 
 CREATE TABLE notificacion (
@@ -122,8 +147,10 @@ CREATE TABLE notificacion (
     id_usuario INT NOT NULL,
     id_paciente INT,
     canal ENUM('APP', 'EMAIL', 'SMS') NOT NULL,
+    tipo VARCHAR(30) NOT NULL DEFAULT 'general',
     contenido TEXT NOT NULL,
     estado ENUM('Pendiente', 'Enviada', 'Fallida') NOT NULL DEFAULT 'Pendiente',
+    leida BOOLEAN NOT NULL DEFAULT FALSE,
     fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_envio DATETIME,
     CONSTRAINT fk_notificacion_usuario FOREIGN KEY (id_usuario)

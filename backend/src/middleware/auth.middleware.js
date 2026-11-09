@@ -28,6 +28,7 @@ export async function authenticate(request, response, next) {
       id: user.id_usuario,
       role: user.rol,
       name: user.nombre,
+      dni: user.dni,
       email: user.email,
     }
     return next()

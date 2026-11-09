@@ -4,6 +4,7 @@ export const initialPatients = [
   {
     id: 1,
     nombre: 'Sofía León',
+    dni: '92000001',
     fechaNacimiento: '2021-04-12',
     edad: '5 años',
     sexo: 'Femenino',
@@ -13,9 +14,11 @@ export const initialPatients = [
     medicacionActual: 'Amoxicilina 250mg/5ml (en curso por faringitis)',
     idTutor1: 101,
     tutor1Nombre: 'Marina Torres',
+    tutor1Dni: '91000001',
     tutor1Telefono: '+54 9 11 4521-8890',
     idTutor2: 102,
     tutor2Nombre: 'Julián León',
+    tutor2Dni: '91000002',
     tutor2Telefono: '+54 9 11 6732-1144',
     estadoGeneral: 'Seguimiento al día',
     pediatraCabecera: 'Dra. Lucía Benítez',
@@ -24,6 +27,7 @@ export const initialPatients = [
   {
     id: 2,
     nombre: 'Benjamín Molina',
+    dni: '92000002',
     fechaNacimiento: '2024-02-18',
     edad: '2 años',
     sexo: 'Masculino',
@@ -33,6 +37,7 @@ export const initialPatients = [
     medicacionActual: 'Salbutamol aerosol 100 mcg (según demanda) · Paracetamol jarabe',
     idTutor1: 103,
     tutor1Nombre: 'Carlos Molina',
+    tutor1Dni: '91000003',
     tutor1Telefono: '+54 9 11 3290-7761',
     idTutor2: null,
     tutor2Nombre: null,
@@ -44,6 +49,7 @@ export const initialPatients = [
   {
     id: 3,
     nombre: 'Valentina Cruz',
+    dni: '92000003',
     fechaNacimiento: '2018-09-05',
     edad: '8 años',
     sexo: 'Femenino',
@@ -53,6 +59,7 @@ export const initialPatients = [
     medicacionActual: 'Cetirizina 5mg/noche',
     idTutor1: 104,
     tutor1Nombre: 'Laura Cruz',
+    tutor1Dni: '91000004',
     tutor1Telefono: '+54 9 11 5566-2211',
     idTutor2: null,
     tutor2Nombre: null,
@@ -64,6 +71,7 @@ export const initialPatients = [
   {
     id: 4,
     nombre: 'Tomás Méndez',
+    dni: '92000004',
     fechaNacimiento: '2025-11-02',
     edad: '11 meses',
     sexo: 'Masculino',
@@ -73,9 +81,11 @@ export const initialPatients = [
     medicacionActual: 'Vitamina D3 en gotas (1 gota diaria)',
     idTutor1: 105,
     tutor1Nombre: 'Valeria Méndez',
+    tutor1Dni: '91000005',
     tutor1Telefono: '+54 9 11 8899-3322',
     idTutor2: 106,
     tutor2Nombre: 'Esteban Méndez',
+    tutor2Dni: '91000006',
     tutor2Telefono: '+54 9 11 7711-4455',
     estadoGeneral: 'Al día (Próximo control del año)',
     pediatraCabecera: 'Dra. Lucía Benítez',
@@ -465,4 +475,3 @@ export const initialNotificationSettings = {
     vacunas: true,
   },
 }
-

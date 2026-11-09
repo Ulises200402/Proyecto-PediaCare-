@@ -17,36 +17,50 @@ export default function FamilyNotificationsView({
   notificationSettings,
   onUpdateSettings,
   onMarkAsRead,
+  readOnly = false,
 }) {
   const [activeTab, setActiveTab] = useState('inbox') // 'inbox' | 'settings'
-  const [settings, setSettings] = useState(notificationSettings)
+  const [editedSettings, setEditedSettings] = useState(null)
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const settings = editedSettings || notificationSettings
 
   const unreadCount = notifications.filter((n) => !n.leida).length
 
   function handleToggleChannel(channel) {
-    setSettings((prev) => ({
+    setEditedSettings((prev) => ({
+      ...(prev || notificationSettings),
       ...prev,
       canales: {
-        ...prev.canales,
-        [channel]: !prev.canales[channel],
+        ...(prev || notificationSettings).canales,
+        [channel]: !(prev || notificationSettings).canales[channel],
       },
     }))
   }
 
   function handleToggleType(type) {
-    setSettings((prev) => ({
+    setEditedSettings((prev) => ({
+      ...(prev || notificationSettings),
       ...prev,
       tipos: {
-        ...prev.tipos,
-        [type]: !prev.tipos[type],
+        ...(prev || notificationSettings).tipos,
+        [type]: !(prev || notificationSettings).tipos[type],
       },
     }))
   }
 
-  function handleSaveSettings(e) {
+  async function handleSaveSettings(e) {
     e.preventDefault()
-    onUpdateSettings(settings)
+    setFormError('')
+    setIsSaving(true)
+    const saved = await onUpdateSettings(settings)
+    setIsSaving(false)
+    if (!saved) {
+      setFormError('No se pudieron guardar las preferencias. Intentá nuevamente.')
+      return
+    }
+    setEditedSettings(settings)
     setSavedSuccess(true)
     setTimeout(() => setSavedSuccess(false), 3000)
   }
@@ -95,7 +109,6 @@ export default function FamilyNotificationsView({
                 <article
                   key={notif.id}
                   className={`notification-item ${isUnread ? 'notification-item--unread' : ''}`}
-                  onClick={() => onMarkAsRead(notif.id)}
                 >
                   <div className="notif-icon-col">
                     <span className="notif-type-icon">
@@ -125,8 +138,18 @@ export default function FamilyNotificationsView({
                   </div>
 
                   <div className="notif-read-col">
-                    {isUnread ? (
-                      <span className="unread-dot" title="No leída" />
+                    {isUnread && !readOnly ? (
+                      <button
+                        type="button"
+                        className="icon-action-btn"
+                        title="Marcar como leída"
+                        aria-label={`Marcar como leída: ${notif.titulo}`}
+                        onClick={() => onMarkAsRead(notif.id)}
+                      >
+                        <Check size={16} />
+                      </button>
+                    ) : isUnread ? (
+                      <span className="text-muted">No leída</span>
                     ) : (
                       <CheckCheck size={16} className="text-muted" title="Leída" />
                     )}
@@ -156,14 +179,15 @@ export default function FamilyNotificationsView({
                 <div className="toggle-text">
                   <Smartphone size={18} />
                   <div>
-                    <strong>Notificaciones en la aplicación (Push)</strong>
-                    <small>Alertas emergentes directas en tu teléfono o navegador.</small>
+                    <strong>Notificaciones dentro de la aplicación</strong>
+                    <small>Avisos en la bandeja de novedades de PediaCare+.</small>
                   </div>
                 </div>
                 <input
                   type="checkbox"
                   checked={settings.canales.app}
                   onChange={() => handleToggleChannel('app')}
+                  disabled={readOnly}
                 />
               </label>
 
@@ -171,14 +195,14 @@ export default function FamilyNotificationsView({
                 <div className="toggle-text">
                   <Mail size={18} />
                   <div>
-                    <strong>Correo electrónico (Email)</strong>
-                    <small>Resúmenes de consultas, constancias de turnos y recetas médicas.</small>
+                    <strong>Correo electrónico (no disponible)</strong>
+                    <small>Este prototipo no envía correos.</small>
                   </div>
                 </div>
                 <input
                   type="checkbox"
-                  checked={settings.canales.email}
-                  onChange={() => handleToggleChannel('email')}
+                  checked={false}
+                  disabled
                 />
               </label>
 
@@ -186,14 +210,14 @@ export default function FamilyNotificationsView({
                 <div className="toggle-text">
                   <MessageSquare size={18} />
                   <div>
-                    <strong>Mensajes de texto SMS</strong>
-                    <small>Avisos urgentes de medicación administrada o recordatorios de turno 24hs antes.</small>
+                    <strong>Mensajes SMS (no disponibles)</strong>
+                    <small>Este prototipo no envía mensajes de texto.</small>
                   </div>
                 </div>
                 <input
                   type="checkbox"
-                  checked={settings.canales.sms}
-                  onChange={() => handleToggleChannel('sms')}
+                  checked={false}
+                  disabled
                 />
               </label>
             </fieldset>
@@ -213,20 +237,22 @@ export default function FamilyNotificationsView({
                   type="checkbox"
                   checked={settings.tipos.turnos}
                   onChange={() => handleToggleType('turnos')}
+                  disabled={readOnly}
                 />
               </label>
 
               <label className="toggle-label">
                 <div className="toggle-text">
                   <div>
-                    <strong>Avisos de medicación y vacunas</strong>
-                    <small>Notificación cuando enfermería administra una dosis o cuando vence una vacuna.</small>
+                    <strong>Avisos de medicación</strong>
+                    <small>Notificación cuando se registra una dosis.</small>
                   </div>
                 </div>
                 <input
                   type="checkbox"
                   checked={settings.tipos.medicacion}
                   onChange={() => handleToggleType('medicacion')}
+                  disabled={readOnly}
                 />
               </label>
 
@@ -241,20 +267,40 @@ export default function FamilyNotificationsView({
                   type="checkbox"
                   checked={settings.tipos.consultas}
                   onChange={() => handleToggleType('consultas')}
+                  disabled={readOnly}
                 />
               </label>
+
+              <label className="toggle-label">
+                <div className="toggle-text">
+                  <div>
+                    <strong>Avisos de vacunas</strong>
+                    <small>Notificación cuando se registra una aplicación.</small>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.tipos.vacunas}
+                  onChange={() => handleToggleType('vacunas')}
+                  disabled={readOnly}
+                />
+              </label>
+
             </fieldset>
 
             <div className="settings-form-actions">
-              <button type="submit" className="action-btn action-btn--primary">
-                Guardar Preferencias de Notificación
-              </button>
+              {!readOnly && (
+                <button type="submit" className="action-btn action-btn--primary" disabled={isSaving}>
+                  {isSaving ? 'Guardando…' : 'Guardar preferencias'}
+                </button>
+              )}
               {savedSuccess && (
                 <span className="saved-success-msg">
                   <Check size={16} /> ¡Preferencias guardadas correctamente!
                 </span>
               )}
             </div>
+            {formError && <p className="form-error" role="alert">{formError}</p>}
           </form>
         </div>
       )}
