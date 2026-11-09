@@ -672,7 +672,7 @@ export default function AuthenticatedDashboard({
                   : `Sección interactiva de ${activeTab.toLowerCase()}.`}
               </p>
             </div>
-            <span className="workspace-date">Hoy, 21 de Octubre</span>
+            <span className="workspace-date">Hoy, 5 de Noviembre</span>
           </div>
 
           {/* ========================================================= */}
@@ -1028,6 +1028,59 @@ export default function AuthenticatedDashboard({
           })()}
         </main>
       </div>
+
+      {/* Navegación inferior exclusiva para mobile */}
+      <nav
+          className="mobile-bottom-nav"
+          aria-label="Navegación mobile"
+        >
+          {profile.nav.map(({ icon: Icon, label }) => {
+            const isActive = activeTab === label
+
+            let badgeCount = null
+
+            if (currentRole === 'ENFERMERO' && label === 'Recordatorios') {
+              badgeCount = reminders.filter(
+                (r) => r.estado === 'Pendiente'
+              ).length
+            } else if (
+              currentRole === 'PADRE_MADRE' &&
+              label === 'Notificaciones'
+            ) {
+              const unread = notifications.filter(
+                (n) => !n.leida
+              ).length
+
+              if (unread > 0) badgeCount = unread
+            }
+
+            return (
+              <button
+                key={label}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
+                className={`mobile-bottom-nav__item ${
+                  isActive ? 'is-active' : ''
+                }`}
+                onClick={() => setActiveTab(label)}
+              >
+                <span className="mobile-bottom-nav__icon">
+                  <Icon size={20} aria-hidden="true" />
+
+                  {badgeCount !== null && (
+                    <span className="mobile-bottom-nav__badge">
+                      {badgeCount}
+                    </span>
+                  )}
+                </span>
+
+                <span className="mobile-bottom-nav__label">
+                  {label}
+                </span>
+              </button>
+            )
+          })}
+        </nav>
 
       {/* Modal Universal de Emergencia (HU 3) */}
       <EmergencyProfileModal

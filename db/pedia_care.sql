@@ -1,3 +1,4 @@
+-- Active: 1776624190935@@localhost@3306@primer_base_en_mac
 CREATE DATABASE IF NOT EXISTS pedia_care
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -175,3 +176,5 @@ CREATE TABLE vacuna (
 ) ENGINE=InnoDB;
 
 SHOW TABLES;
+
+SELECT * FROM usuario;
