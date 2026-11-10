@@ -4840,6 +4840,7 @@
     width: 100%;
     align-items: stretch;
     justify-content: space-around;
+    box-sizing: border-box;
 
     padding: 8px 7px;
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
