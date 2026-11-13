@@ -1,0 +1,8 @@
+Flask>=3.1,<4
+PyJWT>=2.10,<3
+bcrypt>=4.2,<6
+flask-cors>=5.0,<6
+flask-swagger-ui>=5.2,<6
+PyMySQL>=1.1,<2
+python-dotenv>=1.0,<2
+pytest>=8.3,<9

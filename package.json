@@ -5,13 +5,16 @@
   "scripts": {
     "dev": "concurrently -k -n API,WEB \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev:backend": "npm --prefix backend run dev",
+    "dev:backend": "concurrently -k -n IDENTIDAD,CLINICA,COORDINACION \"npm --prefix backend run dev:identity\" \"npm --prefix backend run dev:clinical\" \"npm --prefix backend run dev:coordination\"",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
-    "test": "npm --prefix backend test",
+    "test": "npm --prefix backend test && python -m pytest backend/tests && npm --prefix frontend test",
     "user:create": "npm --prefix backend run user:create"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
+  },
+  "overrides": {
+    "shell-quote": "^1.11.0"
   }
 }

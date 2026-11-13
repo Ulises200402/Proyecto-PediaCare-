@@ -1,56 +1,57 @@
-# PediaCare API
+# Servicios Flask de PediaCare+
 
-API con Express, separada del frontend Vite y preparada para MySQL.
+El backend activo es un conjunto de tres procesos Flask independientes que comparten MySQL y el contrato HTTP consumido por React:
 
-## Desarrollo
+| Servicio | Puerto | Responsabilidad |
+|---|---:|---|
+| `services.identity` | 3001 | Registro, autenticación, pacientes y tutores |
+| `services.clinical` | 3002 | Consultas, medicación, recordatorios y vacunas |
+| `services.coordination` | 3003 | Turnos, notificaciones y salud |
 
-Desde esta carpeta:
+Cada servicio valida el mismo JWT, controla rol y estado de cuenta, y utiliza las mismas credenciales MySQL desde `backend/.env`. No se guarda información clínica en memoria entre servicios. Para iniciar todo el proyecto se recomienda `npm run dev` desde la raíz.
+
+## Preparación
 
 ```powershell
-npm install
-npm run dev
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
-El endpoint `GET http://localhost:3001/api/health` verifica que el servidor responde. El puerto puede cambiarse con la variable de entorno `PORT`.
+Configurar en `.env` MySQL, `APP_ENV=development`, un `JWT_SECRET`, los códigos de habilitación del dueño y `CORS_ORIGINS`. En desarrollo se permite una clave sencilla como `1234` y se muestra una advertencia; no usarla con datos reales ni fuera del entorno local. En otros entornos se exige una clave de al menos 32 caracteres. Nunca guardar `.env` en el repositorio. Antes de iniciar una base nueva, ejecutar `../db/pedia_care.sql`. Para una base existente que ya contiene el esquema actual, ejecutar `../db/migrations/004_login_throttle.sql` una sola vez.
 
-Para conectar MySQL, copiar `.env.example` como `.env`, completar las credenciales locales y ejecutar el esquema `../db/pedia_care.sql`. `GET /api/health/database` prueba la conexión sin exponer credenciales.
+Para usar una clave robusta, generar y guardar una aleatoria desde PowerShell en la raíz del repositorio:
 
-En desarrollo, si `JWT_SECRET` falta, se genera una clave temporal en memoria para esa ejecución; al reiniciar la API, los tokens anteriores dejan de servir. En producción se requiere `JWT_SECRET` persistente de al menos 32 caracteres. No compartir ni subir el archivo `.env`.
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$secret = -join ($bytes | ForEach-Object { $_.ToString('x2') })
+(Get-Content backend/.env) -replace '^JWT_SECRET=.*$', "JWT_SECRET=$secret" |
+  Set-Content backend/.env -Encoding ascii
+$rng.Dispose()
+Remove-Variable secret, bytes
+```
 
-## Endpoints implementados
+Hacerlo una sola vez. Si Windows tiene otra variable `JWT_SECRET` definida, prevalecerá sobre la del archivo `.env`; en ese caso, quitarla de la terminal actual con `Remove-Item Env:JWT_SECRET`.
 
-- `POST /api/auth/login`: recibe `{ "email": "...", "password": "..." }` y devuelve un JWT de una hora.
-- `POST /api/auth/register`: crea cuentas de los tres roles; los perfiles clínicos requieren `MEDICO_REGISTRATION_CODE` o `ENFERMERO_REGISTRATION_CODE` configurado en el entorno.
-- `GET /api/auth/me`: requiere token Bearer y devuelve el usuario vigente.
-- `GET /api/patients` y `GET /api/patients/:patientId`: requieren token. Padres/madres solo ven pacientes vinculados como tutores; profesionales pueden consultar pacientes.
-- `POST /api/patients`: requiere rol `MEDICO`; crea paciente e historia clínica dentro de una transacción.
-- `PUT /api/patients/:patientId`: actualiza una ficha (rol `MEDICO`); `GET /api/patients/tutors` lista tutores (rol `MEDICO`).
-- Consultas: `GET/POST /api/consultations`, `PUT/DELETE /api/consultations/:consultationId` y `GET /api/consultations/metrics`. Editar o eliminar requiere enviar `X-Registration-Code` con el código vigente del rol, que valida el servidor.
-- Turnos: `GET/POST /api/appointments`, `GET /api/appointments/doctors`, `PATCH /api/appointments/:appointmentId/cancel` y `PATCH /api/appointments/:appointmentId/status`.
-- Medicación y recordatorios: `GET/POST/PUT /api/clinical/medications`, `GET /api/clinical/reminders`, `GET /api/clinical/nurses`, `PATCH /api/clinical/reminders/:reminderId/assignment` y `PATCH /api/clinical/reminders/:reminderId/status`. Editar planes requiere `X-Registration-Code`; las dosis pendientes se distribuyen automáticamente entre enfermeros activos con menor carga y médicos/enfermería pueden ajustar la asignación.
-- Vacunas: `GET/POST/PUT/DELETE /api/clinical/vaccines`. Editar o eliminar requiere `X-Registration-Code`.
-- Notificaciones: `GET /api/notifications`, `PATCH /api/notifications/:notificationId/read` y preferencias `GET/PUT /api/notifications/preferences`.
-- `GET /api/health` y `GET /api/health/database`: diagnóstico de API y MySQL.
+Iniciar un proceso individual desde esta carpeta:
 
-El formulario registra cuentas familiares directamente; médico y enfermería requieren código de habilitación. Para alta local, ejecutar `npm run user:create` desde la raíz. El comando solicita el perfil, oculta la contraseña, la guarda con bcrypt y crea el usuario y su perfil dentro de una transacción.
+```powershell
+python -m services.identity.app
+python -m services.clinical.app
+python -m services.coordination.app
+```
 
-El registro web y la herramienta CLI requieren DNI de 7 u 8 dígitos. Los pacientes también requieren DNI único; el buscador permite localizarlos por nombre o DNI, mientras los IDs se mantienen como claves internas.
+## Contratos y validación
 
-Los recordatorios se generan en una ventana móvil de 30 días y se reparten entre enfermeros activos según sus dosis pendientes; enfermería ve sus asignaciones y las que no tengan responsable. Los planes de medicación pueden durar hasta un año. Las notificaciones funcionan solo dentro de la app; no hay envío de correo/SMS ni recuperación de cuenta en este prototipo. Usar únicamente datos ficticios.
+La referencia completa de endpoints, request/response y autenticación está en `../docs/openapi.json`. Swagger UI se publica en `/api/docs` en el servicio de identidad. Todos los endpoints de negocio aceptan el contrato existente `/api/*`; los códigos de confirmación de edición/eliminación viajan en `X-Registration-Code`.
 
-Las notificaciones de consultas, medicación y vacunas se generan al registrar, actualizar o eliminar esos datos, y también al registrar dosis administradas u omitidas. Se respetan las preferencias de notificación de cada tutor. Los códigos de confirmación de cambios se verifican en el servidor con el código del rol correspondiente y nunca se guardan en la base de datos. El modo demo es de solo lectura y no valida códigos.
+Los SQL se ejecutan con parámetros; no registrar credenciales, tokens ni datos clínicos. El login bloquea temporalmente una cuenta o una IP con cinco fallos en una ventana de 15 minutos. Los identificadores usados para limitar intentos se almacenan como hashes.
 
-## Estructura
+Los servicios implementan Application Factory (`common/app.py`), políticas de acceso mediante Strategy (`common/access.py`) y notificaciones transaccionales mediante Observer (`common/events.py`). La prueba del flujo TLS/Wireshark está documentada en `../docs/wireshark-lab.md`; no se incluyen capturas simuladas.
 
-- `src/app.js`: configura Express y exporta la aplicación para facilitar pruebas.
-- `src/server.js`: inicia el servidor HTTP.
-- `src/config/database.js`: crea y exporta el pool de conexiones MySQL.
-- `src/repositories/`: concentra consultas parametrizadas y transacciones.
-- `src/middleware/`: valida JWT, permisos por rol y errores HTTP.
-- `src/validators/`: valida payloads antes de persistirlos.
-- `src/services/`: firma y verifica tokens de acceso.
-- `src/routes/`: declara las rutas de la API.
-- `src/controllers/`: coordina validación, repositorios y respuestas HTTP.
-- `test/`: pruebas que no requieren una instancia MySQL.
+## Pruebas
 
-Ejecutar `npm test` desde la raíz para correr las pruebas.
+Desde la raíz, `npm test` ejecuta la suite heredada, pruebas de unidad y HTTP de Flask, y tests del cliente React. Las pruebas Flask no necesitan credenciales ni una base activa; las pruebas de integración con MySQL deben ejecutarse contra una base ficticia aislada.
+
+`src/` y `test/` son el backend Express anterior. Se conservan para comparar comportamiento y ejecutar pruebas de regresión; no se inician desde `npm run dev`.

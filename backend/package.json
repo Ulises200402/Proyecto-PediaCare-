@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "dev:identity": "python -m services.identity.app",
+    "dev:clinical": "python -m services.clinical.app",
+    "dev:coordination": "python -m services.coordination.app",
     "test": "node --test",
     "user:create": "node src/cli/create-user.js"
   },

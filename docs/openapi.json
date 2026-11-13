@@ -1,0 +1,361 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PediaCare+ API",
+    "version": "1.0.0",
+    "description": "Contrato HTTP compartido por los servicios Flask de identidad, clínica y coordinación. La aplicación es un prototipo y solo debe usarse con datos ficticios."
+  },
+  "servers": [
+    { "url": "/", "description": "Proxy local de Vite hacia los tres servicios Flask" }
+  ],
+  "tags": [
+    { "name": "Autenticación" },
+    { "name": "Pacientes" },
+    { "name": "Consultas" },
+    { "name": "Clínica" },
+    { "name": "Turnos" },
+    { "name": "Notificaciones" },
+    { "name": "Salud" }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Autenticación"],
+        "summary": "Iniciar sesión",
+        "requestBody": { "$ref": "#/components/requestBodies/Login" },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "400": { "$ref": "#/components/responses/InvalidInput" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Autenticación"],
+        "summary": "Registrar una cuenta",
+        "requestBody": { "$ref": "#/components/requestBodies/Registration" },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Success" },
+          "400": { "$ref": "#/components/responses/InvalidInput" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Autenticación"],
+        "summary": "Consultar la cuenta autenticada",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/api/patients": {
+      "get": {
+        "tags": ["Pacientes"],
+        "summary": "Listar pacientes dentro del alcance del rol",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "tags": ["Pacientes"],
+        "summary": "Crear paciente e historia clínica",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Patient" },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/api/patients/tutors": {
+      "get": {
+        "tags": ["Pacientes"],
+        "summary": "Buscar tutores por nombre o DNI",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "search", "in": "query", "schema": { "type": "string", "maxLength": 80 } }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/api/patients/{patientId}": {
+      "parameters": [{ "$ref": "#/components/parameters/PatientId" }],
+      "get": {
+        "tags": ["Pacientes"],
+        "summary": "Consultar ficha de paciente",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "put": {
+        "tags": ["Pacientes"],
+        "summary": "Actualizar ficha de paciente",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Patient" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/consultations": {
+      "get": {
+        "tags": ["Consultas"],
+        "summary": "Listar consultas según rol",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      },
+      "post": {
+        "tags": ["Consultas"],
+        "summary": "Registrar consulta médica",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Consultation" },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" } }
+      }
+    },
+    "/api/consultations/metrics": {
+      "get": {
+        "tags": ["Consultas"],
+        "summary": "Consultar métricas del médico autenticado",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/api/consultations/{consultationId}": {
+      "parameters": [{ "$ref": "#/components/parameters/ConsultationId" }],
+      "put": {
+        "tags": ["Consultas"],
+        "summary": "Editar consulta; requiere X-Registration-Code",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RegistrationCode" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Consultation" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Consultas"],
+        "summary": "Eliminar consulta; requiere X-Registration-Code",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RegistrationCode" }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/clinical/medications": {
+      "get": {
+        "tags": ["Clínica"],
+        "summary": "Listar planes de medicación",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      },
+      "post": {
+        "tags": ["Clínica"],
+        "summary": "Crear plan de medicación",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Medication" },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" } }
+      }
+    },
+    "/api/clinical/medications/{medicationId}": {
+      "parameters": [{ "$ref": "#/components/parameters/MedicationId" }],
+      "put": {
+        "tags": ["Clínica"],
+        "summary": "Editar plan; requiere X-Registration-Code",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RegistrationCode" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Medication" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/clinical/reminders": {
+      "get": {
+        "tags": ["Clínica"],
+        "summary": "Listar recordatorios y asignaciones",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      }
+    },
+    "/api/clinical/nurses": {
+      "get": {
+        "tags": ["Clínica"],
+        "summary": "Listar enfermeros activos",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      }
+    },
+    "/api/clinical/reminders/{reminderId}/assignment": {
+      "patch": {
+        "tags": ["Clínica"],
+        "summary": "Asignar recordatorio a enfermero",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReminderId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ReminderAssignment" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/clinical/reminders/{reminderId}/status": {
+      "patch": {
+        "tags": ["Clínica"],
+        "summary": "Registrar dosis administrada u omitida",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReminderId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ReminderStatus" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/clinical/vaccines": {
+      "get": {
+        "tags": ["Clínica"],
+        "summary": "Listar vacunas",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      },
+      "post": {
+        "tags": ["Clínica"],
+        "summary": "Registrar vacuna",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Vaccine" },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" } }
+      }
+    },
+    "/api/clinical/vaccines/{vaccineId}": {
+      "parameters": [{ "$ref": "#/components/parameters/VaccineId" }],
+      "put": {
+        "tags": ["Clínica"],
+        "summary": "Editar vacuna; requiere X-Registration-Code",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RegistrationCode" }],
+        "requestBody": { "$ref": "#/components/requestBodies/Vaccine" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Clínica"],
+        "summary": "Eliminar vacuna; requiere X-Registration-Code",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RegistrationCode" }],
+        "responses": { "204": { "description": "Vacuna eliminada" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/appointments": {
+      "get": {
+        "tags": ["Turnos"],
+        "summary": "Listar turnos según rol",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      },
+      "post": {
+        "tags": ["Turnos"],
+        "summary": "Solicitar turno como tutor",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/Appointment" },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/api/appointments/doctors": {
+      "get": {
+        "tags": ["Turnos"],
+        "summary": "Listar médicos disponibles",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      }
+    },
+    "/api/appointments/{appointmentId}/status": {
+      "patch": {
+        "tags": ["Turnos"],
+        "summary": "Cambiar estado de turno",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AppointmentId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/AppointmentStatus" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/api/appointments/{appointmentId}/cancel": {
+      "patch": {
+        "tags": ["Turnos"],
+        "summary": "Cancelar turno como tutor",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AppointmentId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": ["Notificaciones"],
+        "summary": "Listar notificaciones de la cuenta autenticada",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      }
+    },
+    "/api/notifications/{notificationId}/read": {
+      "patch": {
+        "tags": ["Notificaciones"],
+        "summary": "Marcar notificación como leída",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/NotificationId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/api/notifications/preferences": {
+      "get": {
+        "tags": ["Notificaciones"],
+        "summary": "Consultar preferencias del tutor",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      },
+      "put": {
+        "tags": ["Notificaciones"],
+        "summary": "Actualizar preferencias del tutor",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "$ref": "#/components/requestBodies/NotificationPreferences" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/InvalidInput" } }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["Salud"],
+        "summary": "Verificar disponibilidad del servicio de coordinación",
+        "responses": { "200": { "$ref": "#/components/responses/Success" } }
+      }
+    },
+    "/api/health/database": {
+      "get": {
+        "tags": ["Salud"],
+        "summary": "Verificar conexión a MySQL",
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "503": { "$ref": "#/components/responses/Unavailable" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "parameters": {
+      "PatientId": { "name": "patientId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "ConsultationId": { "name": "consultationId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "MedicationId": { "name": "medicationId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "ReminderId": { "name": "reminderId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "VaccineId": { "name": "vaccineId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "AppointmentId": { "name": "appointmentId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "NotificationId": { "name": "notificationId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+      "RegistrationCode": { "name": "X-Registration-Code", "in": "header", "required": true, "schema": { "type": "string", "format": "password" } }
+    },
+    "requestBodies": {
+      "Login": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email", "password"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string", "format": "password", "minLength": 8, "maxLength": 72 } } } } } },
+      "Registration": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["nombre", "dni", "email", "password", "role"], "properties": { "nombre": { "type": "string", "maxLength": 100 }, "dni": { "type": "string", "pattern": "^\\d{7,8}$" }, "email": { "type": "string", "format": "email" }, "password": { "type": "string", "format": "password", "minLength": 12 }, "role": { "type": "string", "enum": ["MEDICO", "ENFERMERO", "PADRE_MADRE"] }, "matricula": { "type": "string" }, "especialidad": { "type": "string" }, "telefono": { "type": "string" }, "registrationCode": { "type": "string", "format": "password" } } } } } },
+      "Patient": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["nombre", "dni", "fechaNacimiento", "sexo", "idTutor1"], "properties": { "nombre": { "type": "string", "maxLength": 100 }, "dni": { "type": "string", "pattern": "^\\d{7,8}$" }, "fechaNacimiento": { "type": "string", "format": "date" }, "sexo": { "type": "string", "enum": ["Femenino", "Masculino", "Otro", "No especificado"] }, "idTutor1": { "type": "integer" }, "idTutor2": { "type": "integer", "nullable": true }, "alergias": { "type": "string" }, "enfermedadesCronicas": { "type": "string" } } } } } },
+      "Consultation": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["motivo", "diagnostico", "tratamiento"], "properties": { "idPaciente": { "type": "integer" }, "motivo": { "type": "string", "maxLength": 5000 }, "diagnostico": { "type": "string", "maxLength": 5000 }, "tratamiento": { "type": "string", "maxLength": 5000 }, "observaciones": { "type": "string", "maxLength": 5000 }, "indicacionesParaPadres": { "type": "string", "maxLength": 5000 } } } } } },
+      "Medication": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["idPaciente", "medicamento", "dosis", "via", "frecuencia", "horarios", "fechaInicio"], "properties": { "idPaciente": { "type": "integer" }, "medicamento": { "type": "string", "maxLength": 100 }, "dosis": { "type": "string", "maxLength": 100 }, "via": { "type": "string", "maxLength": 30 }, "frecuencia": { "type": "string", "maxLength": 50 }, "horarios": { "type": "array", "items": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" } }, "fechaInicio": { "type": "string", "format": "date" }, "fechaFin": { "type": "string", "format": "date", "nullable": true }, "indicaciones": { "type": "string" }, "activa": { "type": "boolean" } } } } } },
+      "Vaccine": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["idPaciente", "nombre", "dosis", "estado"], "properties": { "idPaciente": { "type": "integer" }, "nombre": { "type": "string", "maxLength": 100 }, "dosis": { "type": "string", "maxLength": 50 }, "estado": { "type": "string", "enum": ["Pendiente", "Aplicada", "Atrasada"] }, "fechaAplicacion": { "type": "string", "format": "date", "nullable": true }, "proximaDosis": { "type": "string", "format": "date", "nullable": true }, "observaciones": { "type": "string", "maxLength": 500 } } } } } },
+      "ReminderAssignment": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["idEnfermeroAsignado"], "properties": { "idEnfermeroAsignado": { "type": "integer", "minimum": 1 } } } } } },
+      "ReminderStatus": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["estado"], "properties": { "estado": { "type": "string", "enum": ["Administrada", "Omitida"] }, "observaciones": { "type": "string", "maxLength": 500 } } } } } },
+      "Appointment": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["idPaciente", "idMedico", "fechaHora", "motivo"], "properties": { "idPaciente": { "type": "integer" }, "idMedico": { "type": "integer" }, "fechaHora": { "type": "string", "format": "date-time" }, "motivo": { "type": "string", "maxLength": 255 } } } } } },
+      "AppointmentStatus": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["estado"], "properties": { "estado": { "type": "string", "enum": ["Programado", "Confirmado", "Atendido", "Ausente", "Cancelado"] } } } } } },
+      "NotificationPreferences": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["canales", "tipos"], "properties": { "canales": { "type": "object", "required": ["app"], "properties": { "app": { "type": "boolean" } } }, "tipos": { "type": "object", "required": ["turnos", "medicacion", "consultas", "vacunas"], "properties": { "turnos": { "type": "boolean" }, "medicacion": { "type": "boolean" }, "consultas": { "type": "boolean" }, "vacunas": { "type": "boolean" } } } } } } } }
+    },
+    "responses": {
+      "Success": { "description": "Solicitud procesada correctamente", "content": { "application/json": { "schema": { "type": "object" } } } },
+      "InvalidInput": { "description": "Entrada no válida", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Unauthorized": { "description": "Autenticación requerida o token inválido" },
+      "Forbidden": { "description": "El rol o el código de registro no autoriza la operación" },
+      "NotFound": { "description": "Recurso no encontrado" },
+      "Conflict": { "description": "Conflicto de estado o unicidad" },
+      "RateLimited": { "description": "Límite temporal de intentos de inicio de sesión" },
+      "Unavailable": { "description": "Servicio de base de datos no disponible" }
+    },
+    "schemas": {
+      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string" }, "details": { "type": "object", "additionalProperties": true } } }
+    }
+  }
+}
