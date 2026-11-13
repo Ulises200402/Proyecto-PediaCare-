@@ -32,6 +32,23 @@ test('validates and normalizes a parent account', () => {
   assert.equal(result.value.telefono, '1112345678')
 })
 
+test('accepts an 8-character password and rejects a 7-character password', () => {
+  const account = {
+    nombre: 'Marina Torres',
+    dni: '12345678',
+    email: 'marina@example.com',
+    role: 'PADRE_MADRE',
+  }
+
+  const accepted = validateRegistration({ ...account, password: '12345678' })
+  assert.equal(accepted.errors, undefined)
+  assert.equal(accepted.value.password, '12345678')
+
+  const rejected = validateRegistration({ ...account, password: '1234567' })
+  assert.deepEqual(rejected.errors, ['La contraseña debe tener entre 8 y 72 bytes.'])
+  assert.equal(rejected.value, undefined)
+})
+
 test('requires professional profile fields and a registration code', () => {
   const result = validateRegistration({
     nombre: 'Lucía Benítez',
