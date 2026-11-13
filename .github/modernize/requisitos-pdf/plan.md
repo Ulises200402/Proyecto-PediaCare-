@@ -1,182 +1,192 @@
-# Implementation Plan: PediaCare+ PDF Requirements Completion
+# Plan de implementación: completar los requisitos del PDF de PediaCare+
 
-**Date**: 2026-11-13 | **Spec**: [spec.md](./spec.md)
+**Fecha**: 2026-11-13 | **Especificación**: [spec.md](./spec.md)
 
-## Summary
+## Resumen
 
-Restore the missing MySQL login-throttle schema and migration, add safe audit logging and focused
-backend/frontend tests, and complete the documentation and Wireshark evidence path. Preserve the
-current React/Vite, three Flask services, MySQL, existing API contract, and fictitious-data policy.
-MySQL and the five-person team are professor-approved exceptions to the original PDF.
+Restaurar el esquema MySQL y la migración faltantes para limitar intentos de inicio de sesión, añadir
+registros de auditoría seguros y pruebas específicas del backend/frontend, y completar la
+documentación y la evidencia de Wireshark. Conservar React/Vite, los tres servicios Flask, MySQL, el
+contrato actual de la API y la política de datos ficticios. MySQL y el equipo de cinco integrantes son
+excepciones al PDF original aprobadas por el profesor.
 
-## Technical Context
+## Contexto técnico
 
-**Language/Version**: Python 3.11, JavaScript/React 19
+**Lenguaje/Versión**: Python 3.11, JavaScript/React 19
 
-**Primary Dependencies**: Flask, PyMySQL, pytest, Vite, Vitest; add React Testing Library,
-jsdom, and Playwright for the required component/browser tests
+**Dependencias principales**: Flask, PyMySQL, pytest, Vite y Vitest; añadir React Testing Library,
+jsdom y Playwright para las pruebas requeridas de componentes y navegador
 
-**Storage**: Shared MySQL schema in `db/pedia_care.sql`
+**Almacenamiento**: esquema MySQL compartido en `db/pedia_care.sql`
 
-**Testing**: Root `npm test` (Node tests, pytest, Vitest); opt-in MySQL-backed API E2E; Playwright
-browser tests
+**Pruebas**: `npm test` en la raíz (pruebas de Node, pytest y Vitest); pruebas E2E de la API con
+MySQL habilitadas explícitamente; pruebas del navegador con Playwright
 
-**Target Platform**: Windows development environment; local web app and Flask services
+**Plataforma objetivo**: entorno de desarrollo Windows; aplicación web local y servicios Flask
 
-**Performance Goals**: No measurable regression in existing request behavior; audit logging must
-not include request payloads or introduce extra database queries
+**Objetivos de rendimiento**: ninguna regresión medible en el comportamiento actual de las
+solicitudes; los registros de auditoría no deben incluir cargas útiles de solicitudes ni generar
+consultas adicionales a la base de datos
 
-**Constraints**: Additive SQL only; no real patient data; test database name must end in `_test`;
-database-backed E2E is disabled unless explicitly enabled; no Docker CLI or local MySQL/MariaDB
-service was detected, and ports 3306 and 3307 were unreachable at planning time.
+**Restricciones**: solo cambios SQL aditivos; no usar datos reales de pacientes; el nombre de la base
+de pruebas debe terminar en `_test`; las pruebas E2E con base de datos están deshabilitadas salvo que
+se habiliten explícitamente; durante la planificación no se detectó la interfaz de línea de comandos
+de Docker ni un servicio MySQL/MariaDB local, y no se pudo acceder a los puertos 3306 y 3307.
 
-**Baseline evidence**: `npm test` passed before changes: 26 Node tests, 12 pytest tests, and 2
-Vitest tests. Node.js 24.16.0 is available. Docker and Playwright were not initially available;
-Playwright was added and Chromium installed. No local MySQL/MariaDB service was found and ports
-3306 and 3307 were unreachable.
+**Evidencia inicial**: antes de los cambios, `npm test` pasó: 26 pruebas de Node, 12 de pytest y 2
+de Vitest. Está disponible Node.js 24.16.0. Inicialmente no estaban disponibles Docker ni
+Playwright; se añadió Playwright y se instaló Chromium. No se encontró un servicio MySQL/MariaDB
+local y no se pudo acceder a los puertos 3306 y 3307.
 
-**Design inputs**: Existing architecture diagram at
-`docs/architecture-diagram.md`, API contract at
-`docs/openapi.json`, current schema at `db/pedia_care.sql`, and service/test documentation in
-`README.md` and `backend/README.md`. No project topology or knowledge graph was present.
+**Entradas de diseño**: diagrama de arquitectura existente en `docs/architecture-diagram.md`,
+contrato de la API en `docs/openapi.json`, esquema actual en `db/pedia_care.sql` y documentación de
+servicios y pruebas en `README.md` y `backend/README.md`. No había topología del proyecto ni grafo de
+conocimiento.
 
-## Constitution Check
+## Verificación de la constitución
 
-- **I. Preserve Existing Behavior**: PASS — service contracts and user flows remain unchanged;
-  SQL is additive and the migration does not touch application rows.
-- **II. Protect Patient and Account Data**: PASS — tests use fictitious values; audit records avoid
-  tokens, bodies, and clinical details; the existing cleartext capture is not reused as TLS proof.
-- **III. Verify Behavior with Tests**: PASS — add regression, role, database E2E, component, and
-  browser tests. MySQL E2E must be guarded by an explicit opt-in and `_test` database name.
-- **IV. Keep Changes Traceable and Understandable**: PASS — every task maps to the REQ table below;
-  README and Wireshark documentation are updated with verifiable evidence.
-- **V. Prefer Small, Reliable Changes**: PASS — reuse pytest, Vitest, current Flask test clients,
-  and existing API patterns; add only test dependencies required by the assignment.
-- **Approved deviations**: PASS — document, but do not misrepresent, professor approval for MySQL
-  and five group members.
+- **I. Conservar el comportamiento existente**: PASS — los contratos de los servicios y los flujos
+  de usuario no cambian; el SQL es aditivo y la migración no toca registros de la aplicación.
+- **II. Proteger los datos de pacientes y cuentas**: PASS — las pruebas usan valores ficticios; los
+  registros de auditoría no incluyen tokens, cuerpos ni datos clínicos; la captura existente en
+  texto claro no se reutiliza como prueba TLS.
+- **III. Verificar el comportamiento mediante pruebas**: PASS — se añaden pruebas de regresión, por
+  rol, E2E con base de datos, de componentes y de navegador. Las pruebas E2E de MySQL deben estar
+  protegidas por habilitación explícita y un nombre de base que termine en `_test`.
+- **IV. Mantener los cambios trazables y comprensibles**: PASS — cada tarea se vincula con la tabla
+  REQ siguiente; se actualizan el README y la documentación de Wireshark con evidencia verificable.
+- **V. Preferir cambios pequeños y confiables**: PASS — se reutilizan pytest, Vitest, los clientes
+  de prueba actuales de Flask y los patrones existentes de la API; solo se añaden las dependencias de
+  prueba que requiere la consigna.
+- **Excepciones aprobadas**: PASS — se documenta, sin tergiversarla, la aprobación del profesor para
+  MySQL y un equipo de cinco integrantes.
 
-## Applied Guidelines
+## Guías aplicadas
 
-- No supplied migration guideline matches this work: the source/target frameworks are unchanged,
-  and the available Struts-to-Spring guideline is unrelated.
-- Follow the repository's existing Flask, PyMySQL, Vitest, and SQL naming conventions.
+- Ninguna guía de migración proporcionada corresponde a este trabajo: los frameworks de origen y
+  destino no cambian, y la guía disponible de Struts a Spring no está relacionada.
+- Seguir las convenciones existentes del repositorio para Flask, PyMySQL, Vitest y la nomenclatura SQL.
 
-## Implementation Steps
+## Pasos de implementación
 
-### Phase 1: Setup
+### Fase 1: Configuración inicial
 
-#### Step 1.1: [Cross-cutting] Add frontend test infrastructure
-- **Requirements**: REQ-005, REQ-007
-- **Design inputs**: `frontend/package.json`, `frontend/vite.config.js`, current API client tests.
-- **Description**: Add React Testing Library and jsdom to Vitest, add Playwright for browser tests,
-  wire the new test commands into the existing root test command, and keep browser tests isolated
-  from MySQL by stubbing API responses at the browser boundary.
+#### Paso 1.1: [Transversal] Añadir infraestructura de pruebas del frontend
+- **Requisitos**: REQ-005, REQ-007
+- **Entradas de diseño**: `frontend/package.json`, `frontend/vite.config.js`, pruebas actuales del cliente de la API.
+- **Descripción**: Añadir React Testing Library y jsdom a Vitest, añadir Playwright para pruebas del
+  navegador, integrar los nuevos comandos de prueba en el comando de pruebas existente de la raíz y
+  mantener las pruebas del navegador aisladas de MySQL simulando las respuestas de la API en el navegador.
 
-**Tasks**
-- [x] T001 [Plan:1.1] Add React Testing Library, jsdom, and Vitest test configuration in `frontend/package.json` and `frontend/vite.config.js`.
-- [x] T002 [Plan:1.1] Add Playwright configuration, a Vite-backed browser test command, and wire it into the canonical root test flow in `frontend/e2e/` and `package.json`.
+**Tareas**
+- [x] T001 [Plan:1.1] Añadir React Testing Library, jsdom y la configuración de pruebas de Vitest en `frontend/package.json` y `frontend/vite.config.js`.
+- [x] T002 [Plan:1.1] Añadir la configuración de Playwright y un comando de pruebas del navegador con Vite, e integrarlo en el flujo canónico de pruebas de la raíz en `frontend/e2e/` y `package.json`.
 
-### Phase 2: Foundational database and login protection
+### Fase 2: Base de datos y protección del inicio de sesión
 
-#### Step 2.1: [Cross-cutting] Restore the login-throttle schema
-- **Requirements**: REQ-001, REQ-002
-- **Design inputs**: Existing SQL statements and `login_throttle` usage in `backend/services/identity/app.py`.
-- **Description**: Add the table with the exact column names/types used by the login service to the
-  fresh-install SQL, and create an idempotent numbered migration for existing installations.
-  Preserve existing schema and records.
+#### Paso 2.1: [Transversal] Restaurar el esquema de limitación de intentos de inicio de sesión
+- **Requisitos**: REQ-001, REQ-002
+- **Entradas de diseño**: instrucciones SQL existentes y uso de `login_throttle` en `backend/services/identity/app.py`.
+- **Descripción**: Añadir la tabla al SQL de instalación nueva con los nombres y tipos exactos de las
+  columnas que usa el servicio de inicio de sesión, y crear una migración numerada e idempotente para
+  instalaciones existentes. Conservar el esquema y los registros existentes.
 
-#### Step 2.2: [US1] Verify throttling behavior
-- **Requirements**: REQ-003, REQ-006
-- **Design inputs**: `_locked`, `_record_login_failure`, and `login` in
+#### Paso 2.2: [US1] Verificar la limitación de intentos
+- **Requisitos**: REQ-003, REQ-006
+- **Entradas de diseño**: `_locked`, `_record_login_failure` y `login` en
   `backend/services/identity/app.py`.
-- **Description**: Add focused tests for lockout response, failure recording, hashed account/IP
-  scopes, and recovery behavior while avoiding real credentials and MySQL access in unit tests.
+- **Descripción**: Añadir pruebas específicas para la respuesta de bloqueo, el registro de fallos,
+  los ámbitos de cuenta/IP con hash y el comportamiento de recuperación, evitando credenciales reales
+  y el acceso a MySQL en las pruebas unitarias.
 
-**Tasks**
-- [x] T003 [US1] [Plan:2.1] Add `login_throttle` creation to `db/pedia_care.sql` with fields and keys matching `backend/services/identity/app.py`.
-- [x] T004 [US1] [Plan:2.1] Create idempotent `db/migrations/004_login_throttle.sql` for existing databases without modifying application data.
-- [x] T005 [US1] [Plan:2.2] Add focused lockout tests in `backend/tests/test_login_throttle.py` for blocked login, failure recording, hashed scopes, and reset semantics.
+**Tareas**
+- [x] T003 [US1] [Plan:2.1] Añadir la creación de `login_throttle` a `db/pedia_care.sql` con campos y claves que coincidan con `backend/services/identity/app.py`.
+- [x] T004 [US1] [Plan:2.1] Crear `db/migrations/004_login_throttle.sql`, idempotente para bases existentes y sin modificar datos de la aplicación.
+- [x] T005 [US1] [Plan:2.2] Añadir pruebas específicas de bloqueo en `backend/tests/test_login_throttle.py` para inicio de sesión bloqueado, registro de fallos, ámbitos con hash y semántica de reinicio.
 
-### Phase 3: User Story 2 — accountable, role-limited access
+### Fase 3: Historia de usuario 2 — acceso con roles y rendición de cuentas
 
-#### Step 3.1: [US2] Add minimal authenticated-access audit records
-- **Requirements**: REQ-004
-- **Design inputs**: Shared Flask application factory in `backend/services/common/app.py` and
-  authenticated identity set by `backend/services/common/security.py`.
-- **Description**: Record actor ID, role, endpoint, method, and status after authenticated requests.
-  Do not log paths containing resource identifiers, query strings, headers, request bodies, or
-  clinical values. Keep the existing security headers behavior.
+#### Paso 3.1: [US2] Añadir registros mínimos de auditoría para accesos autenticados
+- **Requisitos**: REQ-004
+- **Entradas de diseño**: fábrica compartida de aplicaciones Flask en `backend/services/common/app.py` e
+  identidad autenticada establecida por `backend/services/common/security.py`.
+- **Descripción**: Registrar el ID del actor, el rol, la ruta de la API, el método y el estado después
+  de las solicitudes autenticadas. No registrar rutas que contengan identificadores de recursos,
+  cadenas de consulta, encabezados, cuerpos de solicitudes ni datos clínicos. Conservar el
+  comportamiento actual de los encabezados de seguridad.
 
-#### Step 3.2: [US2] Verify role and log privacy
-- **Requirements**: REQ-004, REQ-006
-- **Design inputs**: Existing Flask `test_client` tests and shared role enforcement.
-- **Description**: Cover an allowed request and a denied request; assert audit data is useful while
-  tokens, passwords, bodies, and patient data are absent.
+#### Paso 3.2: [US2] Verificar los roles y la privacidad de los registros
+- **Requisitos**: REQ-004, REQ-006
+- **Entradas de diseño**: pruebas actuales con `test_client` de Flask y aplicación compartida de permisos por rol.
+- **Descripción**: Cubrir una solicitud permitida y otra denegada; comprobar que los datos de
+  auditoría sean útiles y que no aparezcan tokens, contraseñas, cuerpos de solicitudes ni datos de pacientes.
 
-**Tasks**
-- [x] T006 [US2] [Plan:3.1] Add authenticated request audit logging to `backend/services/common/app.py` without including resource IDs or request data.
-- [x] T007 [US2] [Plan:3.2] Add audit redaction and role allow/deny tests in `backend/tests/test_shared_patterns.py` and `backend/tests/test_service_endpoints.py`.
+**Tareas**
+- [x] T006 [US2] [Plan:3.1] Añadir registros de auditoría de solicitudes autenticadas en `backend/services/common/app.py` sin incluir ID de recursos ni datos de solicitudes.
+- [x] T007 [US2] [Plan:3.2] Añadir pruebas de ocultamiento de datos de auditoría y autorización permitida/denegada por rol en `backend/tests/test_shared_patterns.py` y `backend/tests/test_service_endpoints.py`.
 
-### Phase 4: User Story 3 — reproducible backend and frontend tests
+### Fase 4: Historia de usuario 3 — pruebas reproducibles del backend y frontend
 
-#### Step 4.1: [US3] Add guarded MySQL-backed API end-to-end tests
-- **Requirements**: REQ-005, REQ-006
-- **Design inputs**: `backend/services/identity/app.py`, `backend/services/common/database.py`,
-  existing schema, and test client setup.
-- **Description**: Add at least two multi-step HTTP flows against a real isolated MySQL test
-  database. Use unique fictitious records and cleanup. Require `PEDIACARE_E2E=1` and a database
-  name ending in `_test`; fail closed if either condition is missing. Do not count mocked tests as
-  database E2E.
+#### Paso 4.1: [US3] Añadir pruebas de extremo a extremo de la API con MySQL y controles de seguridad
+- **Requisitos**: REQ-005, REQ-006
+- **Entradas de diseño**: `backend/services/identity/app.py`, `backend/services/common/database.py`,
+  el esquema existente y la configuración del cliente de pruebas.
+- **Descripción**: Añadir al menos dos flujos HTTP de varios pasos contra una base de pruebas MySQL
+  real y aislada. Usar registros ficticios únicos y limpiarlos. Exigir `PEDIACARE_E2E=1` y que el
+  nombre de la base termine en `_test`; rechazar la ejecución si falta cualquiera de las condiciones.
+  No contar pruebas simuladas como pruebas E2E con base de datos.
 
-#### Step 4.2: [US3] Test role-dependent registration and browser behavior
-- **Requirements**: REQ-005, REQ-007
-- **Design inputs**: `frontend/src/components/RegisterPage.jsx`, current Vitest setup, and Playwright
-  test server.
-- **Description**: Add component tests for role-specific professional fields and invalid form
-  feedback; add browser-level tests using fictitious data and intercepted API responses. Verify the
-  browser test runner and install attempt independently of Docker.
+#### Paso 4.2: [US3] Probar el registro según el rol y el comportamiento del navegador
+- **Requisitos**: REQ-005, REQ-007
+- **Entradas de diseño**: `frontend/src/components/RegisterPage.jsx`, la configuración actual de Vitest y el servidor de pruebas de Playwright.
+- **Descripción**: Añadir pruebas de componentes para los campos profesionales específicos de cada
+  rol y los mensajes de formulario no válido; añadir pruebas de navegador con datos ficticios y
+  respuestas de la API interceptadas. Verificar el ejecutor de pruebas del navegador y el intento de
+  instalación independientemente de Docker.
 
-**Tasks**
-- [x] T008 [US3] [Plan:4.1] Add opt-in MySQL E2E fixtures and at least two multi-step identity API flows in `backend/tests/test_api_e2e.py`, with `_test` database guard and cleanup.
-- [x] T009 [US3] [Plan:4.2] Add React Testing Library tests for role-specific registration fields and password mismatch feedback in `frontend/src/components/RegisterPage.test.jsx`.
-- [x] T010 [US3] [Plan:4.2] Add a Playwright browser flow for role-dependent registration UI in `frontend/e2e/register.spec.js`, stubbing API traffic and using fictitious values.
+**Tareas**
+- [x] T008 [US3] [Plan:4.1] Añadir datos de preparación E2E de MySQL habilitados explícitamente y al menos dos flujos de varios pasos de la API de identidad en `backend/tests/test_api_e2e.py`, con protección de base `_test` y limpieza.
+- [x] T009 [US3] [Plan:4.2] Añadir pruebas de React Testing Library para campos de registro específicos por rol y avisos de discrepancia de contraseña en `frontend/src/components/RegisterPage.test.jsx`.
+- [x] T010 [US3] [Plan:4.2] Añadir un flujo de registro en el navegador, dependiente del rol, en `frontend/e2e/register.spec.js` con tráfico de API simulado y valores ficticios.
 
-### Phase 5: User Story 4 — complete delivery documentation and network evidence
+### Fase 5: Historia de usuario 4 — documentación completa de entrega y evidencia de red
 
-#### Step 5.1: [US4] Document nursing need, responsibilities, patterns, roles, and approved exceptions
-- **Requirements**: REQ-008, REQ-009
-- **Design inputs**: Existing README files, architecture diagram, OpenAPI contract, and confirmed
-  team approvals.
-- **Description**: Explain the nursing problem and application response; identify service
-  ownership; provide a role/permission matrix; describe where Factory, Strategy, and Observer are
-  used, what they solve, and why they fit; document MySQL/five-member approvals and shared workload.
+#### Paso 5.1: [US4] Documentar la necesidad de enfermería, las responsabilidades, los patrones, los roles y las excepciones aprobadas
+- **Requisitos**: REQ-008, REQ-009
+- **Entradas de diseño**: archivos README existentes, diagrama de arquitectura, contrato OpenAPI y
+  aprobaciones confirmadas del equipo.
+- **Descripción**: Explicar el problema de enfermería y la respuesta de la aplicación; identificar la
+  responsabilidad de cada servicio; proporcionar una matriz de roles y permisos; describir dónde se
+  usan Factory, Strategy y Observer, qué problema resuelven y por qué son adecuados; documentar las
+  aprobaciones de MySQL y de cinco integrantes, así como la distribución compartida del trabajo.
 
-#### Step 5.2: [US4] Provide safe Wireshark procedure and TLS evidence
-- **Requirements**: REQ-010
-- **Design inputs**: Existing Vite HTTPS configuration and existing capture metadata.
-- **Description**: Create a reproducible Windows-oriented guide for a fictitious API request through
-  the HTTPS Vite endpoint, with a capture filter limited to the public TLS port. Verify protocol
-  metadata only and ensure the evidence contains no real credentials or clinical data. Do not
-  inspect or publish the existing cleartext capture.
+#### Paso 5.2: [US4] Proporcionar un procedimiento seguro de Wireshark y evidencia TLS
+- **Requisitos**: REQ-010
+- **Entradas de diseño**: configuración HTTPS existente de Vite y metadatos de la captura actual.
+- **Descripción**: Crear una guía reproducible orientada a Windows para una solicitud ficticia a la
+  API mediante la ruta HTTPS de Vite, con un filtro de captura limitado al puerto TLS público.
+  Verificar únicamente los metadatos del protocolo y asegurarse de que la evidencia no contenga
+  credenciales reales ni datos clínicos. No inspeccionar ni publicar la captura existente en texto claro.
 
-**Tasks**
-- [x] T011 [US4] [Plan:5.1] Update `README.md` and `backend/README.md` with the nursing need, service ownership, role matrix, pattern rationale, safe logging, migration usage, and professor-approved team/database exceptions.
-- [x] T012 [US4] [Plan:5.2] Create `docs/wireshark-lab.md` with a safe TLS test procedure and add a new verified fictitious-data capture only if local capture tooling succeeds.
+**Tareas**
+- [x] T011 [US4] [Plan:5.1] Actualizar `README.md` y `backend/README.md` con la necesidad de enfermería, la responsabilidad de los servicios, la matriz de roles, la justificación de los patrones, los registros seguros, el uso de la migración y las excepciones de equipo/base de datos aprobadas por el profesor.
+- [x] T012 [US4] [Plan:5.2] Crear `docs/wireshark-lab.md` con un procedimiento seguro de prueba TLS y añadir una nueva captura verificada con datos ficticios solo si las herramientas de captura locales funcionan.
 
-### Phase 6: Final verification
+### Fase 6: Verificación final
 
-#### Step 6.1: [Cross-cutting] Run focused and repository-wide quality checks
-- **Requirements**: REQ-001 through REQ-010
-- **Design inputs**: All deliverables above.
-- **Description**: Run migration/static checks, Python tests, canonical `npm test`, frontend build,
-  and lint. Attempt the MySQL-backed E2E and Wireshark capture independently; report unavailable
-  infrastructure as unverified, never as a pass.
+#### Paso 6.1: [Transversal] Ejecutar comprobaciones de calidad específicas y de todo el repositorio
+- **Requisitos**: REQ-001 a REQ-010
+- **Entradas de diseño**: todos los entregables anteriores.
+- **Descripción**: Ejecutar comprobaciones de migración y análisis estático, pruebas de Python,
+  `npm test` canónico, compilación del frontend y análisis estático. Intentar por separado las
+  pruebas E2E con MySQL y la captura de Wireshark; informar la infraestructura no disponible como
+  no verificada, nunca como aprobada.
 
-**Tasks**
-- [x] T013 [Plan:6.1] Run `python -m pytest backend/tests -q`, `npm test`, `npm run build`, and `npm run lint`; record results and any environmental gaps in the final response.
-- [ ] T014 [Plan:6.1] Run the opt-in MySQL E2E flows against an isolated `_test` database; BLOCKED because no local MySQL service or Docker CLI is available. TLS capture was completed and verified under T012.
+**Tareas**
+- [x] T013 [Plan:6.1] Ejecutar `python -m pytest backend/tests -q`, `npm test`, `npm run build` y `npm run lint`; registrar los resultados y las brechas del entorno en la respuesta final.
+- [ ] T014 [Plan:6.1] Ejecutar los flujos E2E opcionales de MySQL contra una base aislada cuyo nombre termine en `_test`; BLOQUEADO porque no hay un servicio MySQL local ni interfaz de línea de comandos de Docker. La captura TLS se completó y verificó en T012.
 
-## Project Structure
+## Estructura del proyecto
 
 ```text
 db/
@@ -206,69 +216,76 @@ backend/README.md
   checkpoints/
 ```
 
-## Testing Strategy
+## Estrategia de pruebas
 
-- **appType**: Mixed Flask API + React single-page application.
-- **Critical user journeys**:
-  1. Invalid login attempts are recorded against hashed scopes; a locked scope receives HTTP 429.
-  2. A tutor can access an in-scope patient and cannot access an out-of-scope patient.
-  3. A fictitious parent account can register, log in, retrieve its current identity, and reject a duplicate registration against MySQL.
-  4. The registration form changes fields by role and gives accessible feedback when passwords differ.
-  5. A fictitious API request to the HTTPS frontend proxy produces TLS traffic without credentials or clinical data.
-- **primaryValidationStack**: pytest for unit/API tests; a real MySQL test database for database E2E;
-  Vitest + React Testing Library for component behavior; Playwright for browser behavior; root
-  `npm test` as the canonical non-database suite.
+- **appType**: API Flask y aplicación de página única React combinadas.
+- **Recorridos críticos del usuario**:
+  1. Los intentos de inicio de sesión no válidos se registran en ámbitos con hash; un ámbito bloqueado recibe HTTP 429.
+  2. Un tutor puede acceder a un paciente dentro de su ámbito y no puede acceder a uno fuera de él.
+  3. Una cuenta ficticia de padre o madre puede registrarse, iniciar sesión, recuperar su identidad actual y rechazar un registro duplicado en MySQL.
+  4. El formulario de registro cambia los campos según el rol y muestra un aviso accesible cuando las contraseñas no coinciden.
+  5. Una solicitud ficticia a la API mediante el proxy HTTPS del frontend genera tráfico TLS sin credenciales ni datos clínicos.
+- **primaryValidationStack**: pytest para pruebas unitarias y de API; una base de pruebas MySQL real
+  para E2E con base de datos; Vitest + React Testing Library para el comportamiento de componentes;
+  Playwright para el comportamiento del navegador; `npm test` en la raíz como suite canónica sin base de datos.
 - **fallbackMatrix**:
-  - `infra-tier`: Docker-based MySQL is unavailable in this environment. Primary execution uses a
-    manually provisioned local MySQL database named with `_test`; if none is available, database
-    E2E remains **UNVERIFIED**. Flask tests with doubles may run but are not an E2E substitute.
-  - `browser-tier`: Node.js 24.16.0 is available. Add Playwright and attempt Chromium installation.
-    If browser installation fails, retain React Testing Library/API test results and report the
-    browser tier as unverified; record the exact installation error.
-- **Environment requirements**: Node.js/npm; Python 3.11 with `backend/requirements.txt`; a MySQL
-  8 test database for opted-in DB E2E; Playwright Chromium for browser tests; Wireshark/dumpcap
-  and loopback capture permission for TLS evidence. Docker is not a prerequisite when local MySQL
-  is manually provisioned.
-- **knownGaps**: No MySQL service was found and ports 3306/3307 were unreachable during planning.
-  The `DB_NAME` schema in `db/pedia_care.sql` is fixed to `pedia_care`, so provisioning a test
-  database must use an explicitly reviewed test-only schema import. The existing capture contains
-  HTTP and MySQL protocol traffic with no TLS frames; it is not acceptable as TLS proof. The new
-  local capture was verified as TLS-only on the filtered client-to-Vite port.
-- **Test data strategy**: Generate a unique `@example.test` email per run; use synthetic names and
-  values only. Database E2E requires `PEDIACARE_E2E=1` and `DB_NAME` ending `_test`; use a dedicated
-  schema, delete only records created by the test, and fail closed on cleanup errors. Browser tests
-  intercept API requests and do not persist data.
-- **Acceptance criteria**: All unit, component, browser, build, and lint commands return exit code
-  zero; two DB E2E flows pass if a guarded test database is available; otherwise DB E2E is reported
-  as unverified. The TLS evidence task passes only if metadata confirms TLS and no plaintext
-  credentials/clinical data are captured.
-- **Validation review expectations**: Check test exit codes and counts; verify migrations against a
-  test schema only; confirm the `_test` guard; inspect audit assertions without dumping captured
-  sensitive values; verify capture protocol metadata, not payloads; do not claim unrun tests pass.
-- **Legacy test assets**: Discovered Node tests and pytest tests are unit/route-level tests, and the
-  frontend contains Vitest API-client tests. No existing browser E2E suite was found; there is no
-  legacy E2E migration.
-- **External dependency strategy**: MySQL is a real dependency only for explicitly enabled database
-  E2E; no message broker or external API is used. Vitest tests mock the API module. Playwright tests
-  intercept `/api/**` responses. Each Flask service gets startup/API smoke tests through its test
-  client and OpenAPI route. Test execution is coordinated by root `npm test`; database E2E uses the
-  explicit environment guard.
+  - `infra-tier`: MySQL basado en Docker no está disponible en este entorno. La ejecución principal
+    usa una base MySQL local aprovisionada manualmente cuyo nombre termina en `_test`; si no hay una
+    disponible, las pruebas E2E con base de datos quedan **UNVERIFIED**. Se pueden ejecutar pruebas
+    de Flask con dobles, pero no sustituyen las pruebas E2E.
+  - `browser-tier`: Node.js 24.16.0 está disponible. Añadir Playwright e intentar instalar Chromium.
+    Si falla la instalación del navegador, conservar los resultados de React Testing Library y de
+    las pruebas de API, e informar el nivel de navegador como no verificado; registrar el error
+    exacto de instalación.
+- **Requisitos del entorno**: Node.js/npm; Python 3.11 con `backend/requirements.txt`; una base de
+  pruebas MySQL 8 para las pruebas E2E habilitadas; Chromium de Playwright para las pruebas del
+  navegador; Wireshark/dumpcap y permiso de captura de loopback para la evidencia TLS. Docker no es
+  requisito si MySQL local se aprovisiona manualmente.
+- **knownGaps**: Durante la planificación no se encontró un servicio MySQL y no se pudo acceder a
+  los puertos 3306/3307. El esquema `DB_NAME` de `db/pedia_care.sql` está fijado en `pedia_care`,
+  por lo que para aprovisionar una base de pruebas se debe importar un esquema exclusivo de pruebas
+  revisado explícitamente. La captura existente contiene tráfico de protocolo HTTP y MySQL, sin
+  tramas TLS; no es aceptable como evidencia TLS. Se verificó que la nueva captura local solo
+  contiene TLS en el puerto filtrado entre el cliente y Vite.
+- **Estrategia de datos de prueba**: Generar un correo único `@example.test` en cada ejecución y
+  usar únicamente nombres y valores sintéticos. Las pruebas E2E con base de datos requieren
+  `PEDIACARE_E2E=1` y que `DB_NAME` termine en `_test`; usar un esquema dedicado, eliminar solo los
+  registros creados por la prueba y detenerse ante errores de limpieza. Las pruebas del navegador
+  interceptan solicitudes de la API y no guardan datos.
+- **Criterios de aceptación**: Todos los comandos de pruebas unitarias, de componentes y de navegador,
+  compilación y análisis estático terminan con código cero; pasan dos flujos E2E con base de datos
+  si hay una base de pruebas protegida; de lo contrario, se informa que las pruebas E2E no se
+  verificaron. La tarea de evidencia TLS solo pasa si los metadatos confirman TLS y no se capturaron
+  credenciales ni datos clínicos en texto claro.
+- **Expectativas de revisión de validación**: Comprobar códigos de salida y cantidades de pruebas;
+  verificar migraciones únicamente contra un esquema de pruebas; confirmar la protección `_test`;
+  inspeccionar las aserciones de auditoría sin volcar valores confidenciales capturados; verificar
+  los metadatos del protocolo de la captura, no sus cargas útiles; no afirmar que pasaron pruebas no ejecutadas.
+- **Recursos de pruebas heredados**: Las pruebas de Node y pytest descubiertas son pruebas unitarias
+  o de rutas, y el frontend contiene pruebas del cliente de API con Vitest. No se encontró una suite
+  E2E de navegador existente; no hay una migración E2E heredada.
+- **Estrategia de dependencias externas**: MySQL es una dependencia real únicamente para pruebas
+  E2E habilitadas explícitamente; no se usa un intermediario de mensajes ni una API externa. Las
+  pruebas de Vitest simulan el módulo de API. Las pruebas de Playwright interceptan respuestas
+  `/api/**`. Cada servicio Flask recibe pruebas básicas de inicio/API mediante su cliente de pruebas
+  y la ruta OpenAPI. La ejecución de pruebas se coordina con `npm test` en la raíz; las E2E de base
+  de datos usan la protección explícita del entorno.
 
-## Complexity Tracking
+## Seguimiento de complejidad
 
-No constitution violations or additional production abstractions are planned.
+No se prevén incumplimientos de la constitución ni abstracciones adicionales en producción.
 
-## Requirement Mapping
+## Correspondencia de requisitos
 
-| REQ ID | Description | Plan Items | Implementation Evidence |
+| ID del requisito | Descripción | Elementos del plan | Evidencia de implementación |
 |--------|-------------|------------|------------------------|
-| REQ-001 | Fresh schema contains the login-throttle table | 2.1 | `db/pedia_care.sql` |
-| REQ-002 | Existing databases receive a safe idempotent migration | 2.1 | `db/migrations/004_login_throttle.sql`, `backend/README.md` |
-| REQ-003 | Lockout behavior and safe failed-login logging are tested | 2.2 | `backend/services/identity/app.py`, `backend/tests/test_login_throttle.py` |
-| REQ-004 | Authenticated operations produce privacy-safe audit records | 3.1, 3.2 | `backend/services/common/app.py`, `backend/tests/test_shared_patterns.py` |
-| REQ-005 | Backend has two guarded API E2E flows | 1.1, 4.1 | `backend/tests/test_api_e2e.py`, root `package.json` |
-| REQ-006 | Auth, role access, validation, duplicate behavior use fictitious data | 2.2, 3.2, 4.1 | `backend/tests/test_login_throttle.py`, `backend/tests/test_service_endpoints.py`, `backend/tests/test_api_e2e.py` |
-| REQ-007 | Frontend tests cover role-specific fields and invalid feedback | 1.1, 4.2 | `frontend/src/components/RegisterPage.test.jsx`, `frontend/e2e/register.spec.js` |
-| REQ-008 | Nursing need, service responsibilities, roles, security, and patterns are documented | 5.1 | `README.md`, `backend/README.md` |
-| REQ-009 | Approved MySQL/five-person exceptions and equitable workload are documented | 5.1 | `README.md` |
-| REQ-010 | Safe Wireshark/TLS procedure and evidence are provided | 5.2 | `docs/wireshark-lab.md`, new TLS capture if local tooling permits |
+| REQ-001 | El esquema nuevo incluye la tabla para limitar intentos de inicio de sesión | 2.1 | `db/pedia_care.sql` |
+| REQ-002 | Las bases existentes reciben una migración segura e idempotente | 2.1 | `db/migrations/004_login_throttle.sql`, `backend/README.md` |
+| REQ-003 | Se prueban el bloqueo y el registro seguro de intentos fallidos | 2.2 | `backend/services/identity/app.py`, `backend/tests/test_login_throttle.py` |
+| REQ-004 | Las operaciones autenticadas generan registros de auditoría que protegen la privacidad | 3.1, 3.2 | `backend/services/common/app.py`, `backend/tests/test_shared_patterns.py` |
+| REQ-005 | El backend tiene dos flujos E2E de API protegidos | 1.1, 4.1 | `backend/tests/test_api_e2e.py`, `package.json` de la raíz |
+| REQ-006 | La autenticación, el acceso por rol, la validación y los duplicados usan datos ficticios | 2.2, 3.2, 4.1 | `backend/tests/test_login_throttle.py`, `backend/tests/test_service_endpoints.py`, `backend/tests/test_api_e2e.py` |
+| REQ-007 | Las pruebas del frontend cubren campos específicos por rol y mensajes de datos no válidos | 1.1, 4.2 | `frontend/src/components/RegisterPage.test.jsx`, `frontend/e2e/register.spec.js` |
+| REQ-008 | Se documentan la necesidad de enfermería, las responsabilidades de los servicios, los roles, la seguridad y los patrones | 5.1 | `README.md`, `backend/README.md` |
+| REQ-009 | Se documentan las excepciones aprobadas para MySQL y cinco integrantes, y la distribución equitativa del trabajo | 5.1 | `README.md` |
+| REQ-010 | Se proporcionan un procedimiento seguro de Wireshark/TLS y evidencia | 5.2 | `docs/wireshark-lab.md`, nueva captura TLS si las herramientas locales lo permiten |

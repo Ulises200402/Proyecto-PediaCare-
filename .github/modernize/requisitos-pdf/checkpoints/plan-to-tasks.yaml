@@ -13,86 +13,86 @@ summary:
 
 phases:
   - phase_id: "Phase-1"
-    phase_name: "Setup"
+    phase_name: "Configuración inicial"
     items:
       - item_id: "1.1"
-        description: "Add frontend test infrastructure."
+        description: "Añadir infraestructura de pruebas para el frontend."
         tasks:
           - task_id: "T001"
-            description: "Add React Testing Library, jsdom, and Vitest configuration."
+            description: "Añadir React Testing Library, jsdom y la configuración de Vitest."
           - task_id: "T002"
-            description: "Add Playwright configuration and the browser test command."
+            description: "Añadir la configuración de Playwright y el comando de pruebas del navegador."
         notes: ""
   - phase_id: "Phase-2"
-    phase_name: "Foundational database and login protection"
+    phase_name: "Base de datos y protección del inicio de sesión"
     items:
       - item_id: "2.1"
-        description: "Restore the login-throttle schema."
+        description: "Restaurar el esquema de limitación de intentos de inicio de sesión."
         tasks:
           - task_id: "T003"
-            description: "Add the table to the fresh-install MySQL schema."
+            description: "Añadir la tabla al esquema MySQL para instalaciones nuevas."
           - task_id: "T004"
-            description: "Add an idempotent migration for existing databases."
+            description: "Añadir una migración idempotente para bases de datos existentes."
       - item_id: "2.2"
-        description: "Verify throttling behavior."
+        description: "Verificar el comportamiento de limitación de intentos."
         tasks:
           - task_id: "T005"
-            description: "Add focused login-throttle tests."
+            description: "Añadir pruebas específicas para la limitación de intentos de inicio de sesión."
         notes: ""
   - phase_id: "Phase-3"
-    phase_name: "Accountable, role-limited access"
+    phase_name: "Acceso con roles y rendición de cuentas"
     items:
       - item_id: "3.1"
-        description: "Add minimal authenticated-access audit records."
+        description: "Añadir registros mínimos de auditoría para accesos autenticados."
         tasks:
           - task_id: "T006"
-            description: "Add privacy-safe audit logging to the shared Flask factory."
+            description: "Añadir registros de auditoría que protejan la privacidad en la fábrica compartida de Flask."
       - item_id: "3.2"
-        description: "Verify role and log privacy."
+        description: "Verificar los permisos por rol y la privacidad de los registros."
         tasks:
           - task_id: "T007"
-            description: "Add role allow/deny and audit-redaction tests."
+            description: "Añadir pruebas de autorización por rol y ocultamiento de datos en la auditoría."
         notes: ""
   - phase_id: "Phase-4"
-    phase_name: "Reproducible backend and frontend tests"
+    phase_name: "Pruebas reproducibles del backend y frontend"
     items:
       - item_id: "4.1"
-        description: "Add guarded MySQL-backed API end-to-end tests."
+        description: "Añadir pruebas de extremo a extremo de la API con MySQL y controles de seguridad."
         tasks:
           - task_id: "T008"
-            description: "Add the opt-in MySQL E2E fixtures and identity flows."
+            description: "Añadir datos de preparación para pruebas E2E de MySQL opcionales y flujos de identidad."
       - item_id: "4.2"
-        description: "Test role-dependent registration and browser behavior."
+        description: "Probar el registro según el rol y el comportamiento en el navegador."
         tasks:
           - task_id: "T009"
-            description: "Add React Testing Library registration tests."
+            description: "Añadir pruebas de registro con React Testing Library."
           - task_id: "T010"
-            description: "Add a Playwright registration browser flow."
+            description: "Añadir un flujo de registro en el navegador con Playwright."
         notes: ""
   - phase_id: "Phase-5"
-    phase_name: "Documentation and network evidence"
+    phase_name: "Documentación y evidencia de red"
     items:
       - item_id: "5.1"
-        description: "Document nursing need, responsibilities, patterns, roles, and approved exceptions."
+        description: "Documentar la necesidad de enfermería, las responsabilidades, los patrones, los roles y las excepciones aprobadas."
         tasks:
           - task_id: "T011"
-            description: "Update README and backend README."
+            description: "Actualizar el README principal y el del backend."
       - item_id: "5.2"
-        description: "Provide safe Wireshark procedure and TLS evidence."
+        description: "Proporcionar un procedimiento seguro para Wireshark y evidencia TLS."
         tasks:
           - task_id: "T012"
-            description: "Create the safe Wireshark lab and conditionally capture verified TLS evidence."
+            description: "Crear una práctica segura de Wireshark y, si es posible, capturar evidencia TLS verificada."
         notes: ""
   - phase_id: "Phase-6"
-    phase_name: "Final verification"
+    phase_name: "Verificación final"
     items:
       - item_id: "6.1"
-        description: "Run focused and repository-wide quality checks."
+        description: "Ejecutar comprobaciones de calidad específicas y de todo el repositorio."
         tasks:
           - task_id: "T013"
-            description: "Run Python, npm, build, and lint checks."
+            description: "Ejecutar comprobaciones de Python, npm, compilación y lint."
           - task_id: "T014"
-            description: "Attempt guarded MySQL E2E and local TLS capture."
+            description: "Intentar las pruebas E2E protegidas con MySQL y una captura TLS local."
         notes: ""
 
 missing_plan_items: []
@@ -140,4 +140,4 @@ validation:
   passed: true
   errors: []
   warnings:
-    - "Database E2E and TLS capture are conditional on local services and capture permissions."
+    - "Las pruebas E2E de base de datos y la captura TLS dependen de los servicios locales y de los permisos de captura."

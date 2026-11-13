@@ -2,7 +2,7 @@ batch_id: "B01"
 completed_tasks: ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013"]
 blocked_tasks:
   - task_id: "T014"
-    reason: "No local MySQL/MariaDB service or Docker CLI is available; ports 3306 and 3307 are unreachable."
+    reason: "No hay un servicio MySQL/MariaDB local ni una interfaz de línea de comandos de Docker disponible; no se puede acceder a los puertos 3306 y 3307."
     required_task_ids: []
 endpoint_probes:
   - method: GET
@@ -13,146 +13,146 @@ endpoint_probes:
     path: /api/openapi.json
     status: 200
     result: PASS
-    notes: "Verified directly on Flask ports 3001, 3002, 3003 and through the Vite proxy."
+    notes: "Verificado directamente en los puertos Flask 3001, 3002 y 3003, y mediante el proxy de Vite."
 files_changed:
   T001:
     - file: "frontend/package.json"
       change_type: "modified"
-      description: "Added React Testing Library, jsdom, and Vitest scripts/dependencies."
+      description: "Se añadieron React Testing Library, jsdom y scripts/dependencias de Vitest."
     - file: "frontend/vite.config.js"
       change_type: "modified"
-      description: "Configured jsdom and test setup."
+      description: "Se configuraron jsdom y la preparación de pruebas."
     - file: "frontend/src/test-setup.js"
       change_type: "created"
-      description: "Added testing-library setup and cleanup."
+      description: "Se añadieron la preparación y la limpieza de Testing Library."
   T002:
     - file: "frontend/playwright.config.js"
       change_type: "created"
-      description: "Configured local Vite test server and Chromium."
+      description: "Se configuraron el servidor local de pruebas de Vite y Chromium."
     - file: "frontend/e2e/register.spec.js"
       change_type: "created"
-      description: "Added browser-level registration tests."
+      description: "Se añadieron pruebas de registro en el navegador."
     - file: "frontend/package-lock.json"
       change_type: "modified"
-      description: "Locked frontend test dependencies."
+      description: "Se fijaron las versiones de las dependencias de prueba del frontend."
     - file: ".gitignore"
       change_type: "modified"
-      description: "Ignored generated Playwright output."
+      description: "Se excluyeron los archivos generados por Playwright."
   T003:
     - file: "db/pedia_care.sql"
       change_type: "modified"
-      description: "Added the login_throttle table to the fresh-install schema."
+      description: "Se añadió la tabla login_throttle al esquema para instalaciones nuevas."
   T004:
     - file: "db/migrations/004_login_throttle.sql"
       change_type: "created"
-      description: "Added an idempotent migration for existing databases."
+      description: "Se añadió una migración idempotente para bases de datos existentes."
   T005:
     - file: "backend/tests/test_login_throttle.py"
       change_type: "created"
-      description: "Added login lockout regression tests."
+      description: "Se añadieron pruebas de regresión para el bloqueo de inicio de sesión."
   T006:
     - file: "backend/services/common/app.py"
       change_type: "modified"
-      description: "Added minimal audit logging for authenticated API requests."
+      description: "Se añadieron registros mínimos de auditoría para solicitudes autenticadas a la API."
   T007:
     - file: "backend/tests/test_shared_patterns.py"
       change_type: "modified"
-      description: "Added audit-log privacy assertions."
+      description: "Se añadieron aserciones de privacidad para los registros de auditoría."
     - file: "backend/tests/test_service_endpoints.py"
       change_type: "modified"
-      description: "Added role allow/deny regression coverage."
+      description: "Se añadieron pruebas de regresión para autorización y denegación según el rol."
   T008:
     - file: "backend/tests/test_api_e2e.py"
       change_type: "created"
-      description: "Added guarded MySQL registration and duplicate-registration flows."
+      description: "Se añadieron flujos protegidos de registro y registro duplicado con MySQL."
   T009:
     - file: "frontend/src/components/RegisterPage.test.jsx"
       change_type: "created"
-      description: "Added role-specific field and invalid-feedback component tests."
+      description: "Se añadieron pruebas de componentes para campos específicos por rol y avisos de datos no válidos."
   T010:
     - file: "frontend/e2e/register.spec.js"
       change_type: "created"
-      description: "Added Playwright flows with API traffic intercepted."
+      description: "Se añadieron flujos de Playwright con el tráfico de la API interceptado."
   T011:
     - file: "README.md"
       change_type: "modified"
-      description: "Documented project need, services, permissions, patterns, and approved exceptions."
+      description: "Se documentaron la necesidad del proyecto, los servicios, los permisos, los patrones y las excepciones aprobadas."
     - file: "backend/README.md"
       change_type: "modified"
-      description: "Documented migration, audit behavior, and backend validation."
+      description: "Se documentaron la migración, el comportamiento de auditoría y la validación del backend."
   T012:
     - file: "docs/wireshark-lab.md"
       change_type: "created"
-      description: "Added a safe fictitious-data TLS capture procedure."
+      description: "Se añadió un procedimiento seguro de captura TLS con datos ficticios."
     - file: "docs/pedia-care-tls-api-ficticia.pcapng"
       change_type: "created"
-      description: "Added verified local TLS-only capture evidence."
+      description: "Se añadió evidencia verificada de una captura local que solo contiene TLS."
   T013:
     - file: ".github/modernize/requisitos-pdf/plan.md"
       change_type: "modified"
-      description: "Marked completed work and documented the remaining MySQL blocker."
+      description: "Se marcó el trabajo completado y se documentó el bloqueo pendiente de MySQL."
     - file: ".github/modernize/requisitos-pdf/requirements-checklist.md"
       change_type: "modified"
-      description: "Recorded validation results and outstanding live-database verification."
+      description: "Se registraron los resultados de validación y la verificación pendiente en una base activa."
     - file: ".github/modernize/requisitos-pdf/runtime-validation-report.md"
       change_type: "created"
-      description: "Recorded runtime, test, build, and environment evidence."
+      description: "Se registró evidencia de ejecución, pruebas, compilación y entorno."
     - file: ".github/modernize/requisitos-pdf/checkpoints/tasks-to-impl.yaml"
       change_type: "created"
-      description: "Recorded task-to-implementation traceability."
+      description: "Se registró la trazabilidad de tareas a implementación."
     - file: ".github/modernize/requisitos-pdf/batch-report.yaml"
       change_type: "created"
-      description: "Recorded batch implementation outcomes."
+      description: "Se registraron los resultados de implementación del lote."
 upstream_artifacts_consumed:
   T001:
     - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-005,REQ-007"
-      used_for: "Frontend test scope."
+      used_for: "Alcance de las pruebas del frontend."
     - artifact: ".github/modernize/requisitos-pdf/plan.md#1.1"
-      used_for: "Test setup and canonical command requirements."
+      used_for: "Requisitos de preparación de pruebas y del comando canónico."
   T003:
     - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-001"
-      used_for: "Required throttle table shape."
-    - artifact: ".github/modernize/requisitos-pdf/constitution.md#I"
-      used_for: "Additive, non-destructive schema change."
+      used_for: "Estructura requerida de la tabla de limitación."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#i-conservar-el-comportamiento-existente"
+      used_for: "Cambio de esquema aditivo y no destructivo."
   T006:
     - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-004"
-      used_for: "Required audit fields and exclusions."
-    - artifact: ".github/modernize/requisitos-pdf/constitution.md#II"
-      used_for: "Privacy constraints for logs."
+      used_for: "Campos y exclusiones requeridos para la auditoría."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#ii-proteger-los-datos-de-pacientes-y-cuentas"
+      used_for: "Restricciones de privacidad para los registros."
   T008:
     - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-005"
-      used_for: "Two isolated, fictitious-data MySQL E2E flows."
-    - artifact: ".github/modernize/requisitos-pdf/constitution.md#III"
-      used_for: "Explicit opt-in and test-database guard."
+      used_for: "Dos flujos E2E aislados de MySQL con datos ficticios."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#iii-verificar-el-comportamiento-mediante-pruebas"
+      used_for: "Habilitación explícita y protección de la base de pruebas."
   T011:
     - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-008,REQ-009"
-      used_for: "Documentation scope and approved deviations."
+      used_for: "Alcance de la documentación y excepciones aprobadas."
   T012:
     - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-010"
-      used_for: "Safe TLS capture requirements."
-    - artifact: ".github/modernize/requisitos-pdf/constitution.md#Additional Constraints"
-      used_for: "Fictitious data and no credential exposure."
+      used_for: "Requisitos para una captura TLS segura."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#restricciones-adicionales"
+      used_for: "Datos ficticios y prohibición de exponer credenciales."
 evidence_mapping:
   T001:
     - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-007"
       output: "frontend/src/components/RegisterPage.test.jsx"
-      evidence: "Four Vitest tests passed."
+      evidence: "Pasaron cuatro pruebas de Vitest."
   T006:
     - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-004"
       output: "backend/services/common/app.py"
-      evidence: "Audit privacy tests passed in pytest."
+      evidence: "Pasaron en pytest las pruebas de privacidad de auditoría."
   T008:
     - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-005"
       output: "backend/tests/test_api_e2e.py"
-      evidence: "Two test flows were created; both are skipped without opt-in MySQL. Invalid non-_test database was rejected before connecting."
+      evidence: "Se crearon dos flujos de prueba; ambos se omiten si no se habilita MySQL explícitamente. Se rechazó una base cuyo nombre no termina en _test antes de conectar."
   T010:
     - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-007"
       output: "frontend/e2e/register.spec.js"
-      evidence: "Two Playwright tests passed."
+      evidence: "Pasaron dos pruebas de Playwright."
   T012:
     - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-010"
       output: "docs/pedia-care-tls-api-ficticia.pcapng"
-      evidence: "Metadata verified 8 TLS packets and 0 HTTP packets on the capture filter."
+      evidence: "Los metadatos verificaron 8 paquetes TLS y 0 paquetes HTTP con el filtro de captura."
 traceability:
   - requirement: "REQ-001"
     plan_item: "2.1"
@@ -208,9 +208,9 @@ protocol_violation: false
 errors: []
 warnings:
   - severity: LOW
-    message: "npm run lint exits 0 with one pre-existing Date.now purity warning."
+    message: "npm run lint termina con código 0 y una advertencia preexistente de pureza sobre Date.now."
   - severity: MEDIUM
-    message: "MySQL-backed E2E and live schema migration behavior are unverified because no isolated MySQL service is available."
+    message: "Las pruebas E2E con MySQL y el comportamiento de la migración del esquema en ejecución no se verificaron porque no hay un servicio MySQL aislado disponible."
 test_results:
   T013:
     command: "npm test"

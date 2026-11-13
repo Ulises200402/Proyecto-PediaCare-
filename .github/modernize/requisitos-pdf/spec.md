@@ -1,125 +1,127 @@
-# Feature Specification: Completar requisitos del trabajo integrador
+# Especificación de funcionalidades: completar los requisitos del trabajo integrador
 
-> Governed by: `./constitution.md` (principios acordados para esta implementación)
+> Regida por: `./constitution.md` (principios acordados para esta implementación)
 
-**Feature Branch**: `completion-pdf-requirements`  
-**Created**: 2026-03-17  
-**Status**: Draft for implementation  
-**Input**: User request to restore the missing `login_throttle` database definition and implement the remaining applicable requirements from the Programming II assignment PDF.
+**Rama de funcionalidad**: `completion-pdf-requirements`
+**Creada**: 2026-03-17
+**Estado**: Borrador para implementación
+**Entrada**: Solicitud del usuario para restaurar la definición faltante de la tabla `login_throttle` e implementar los demás requisitos aplicables del PDF de la consigna de Programación II.
 
-## Scope Baseline
+## Alcance inicial
 
-- **Discovery method**: Reviewed the three-page assignment PDF, the current README files, Flask services/tests, frontend test setup, MySQL schema, and the available Wireshark capture metadata.
-- **Total items discovered**: Seven assignment sections, plus five suggested test scenarios and the delivery constraints.
-- **Items in scope**: Outstanding or weakly evidenced database, security logging, backend/frontend testing, Wireshark evidence, and project documentation. Existing application features, Flask services, MySQL usage, React UI, login throttling logic, and the three implemented design patterns are preserved.
-- **Approved deviations**: The professor has accepted MySQL instead of MongoDB and a five-person group instead of the PDF's four-person limit. The group contribution statement should describe an equitable shared workload, as requested by the user.
-- **Evidence risk**: The existing capture was inspected only through protocol metadata. It contains HTTP and MySQL traffic and no TLS frames, so it does not demonstrate protected HTTPS traffic and must not be presented as TLS evidence. Do not inspect or publish its payloads; use fictitious data for any replacement capture.
+- **Método de análisis**: Se revisaron el PDF de la consigna de tres páginas, los archivos README actuales, los servicios y pruebas de Flask, la configuración de pruebas del frontend, el esquema MySQL y los metadatos disponibles de la captura de Wireshark.
+- **Total de elementos identificados**: Siete secciones de la consigna, además de cinco escenarios de prueba sugeridos y las restricciones de entrega.
+- **Elementos dentro del alcance**: Requisitos de base de datos aún pendientes o con evidencia insuficiente, registros de seguridad, pruebas del backend/frontend, evidencia de Wireshark y documentación del proyecto. Se conservan las funcionalidades existentes, los servicios Flask, el uso de MySQL, la interfaz React, la lógica de limitación de intentos de inicio de sesión y los tres patrones de diseño implementados.
+- **Excepciones aprobadas**: El profesor aceptó MySQL en lugar de MongoDB y un equipo de cinco integrantes en lugar del límite de cuatro indicado en el PDF. La declaración de contribuciones del equipo debe describir una distribución equitativa del trabajo, según lo solicitado por el usuario.
+- **Riesgo de la evidencia**: La captura existente se inspeccionó únicamente mediante sus metadatos de protocolo. Contiene tráfico HTTP y MySQL, pero no tramas TLS; por ello, no demuestra tráfico HTTPS protegido y no debe presentarse como evidencia TLS. No inspeccionar ni publicar sus cargas útiles; usar datos ficticios en cualquier captura de reemplazo.
 
-## User Scenarios & Testing
+## Escenarios de usuario y pruebas
 
-### User Story 1 - A new or existing installation can use login throttling (Priority: P1)
+### Historia de usuario 1: una instalación nueva o existente puede usar la limitación de intentos de inicio de sesión (Prioridad: P1)
 
-As the person configuring PediaCare+, I need the database definitions required by the existing login lockout logic so that login attempts are counted and temporary blocks work consistently after a fresh install or an upgrade.
+Como persona encargada de configurar PediaCare+, necesito las definiciones de base de datos que requiere la lógica existente de bloqueo de inicio de sesión, para que los intentos se contabilicen y los bloqueos temporales funcionen de manera consistente tanto después de una instalación nueva como de una actualización.
 
-**Why this priority**: Without the table, the login endpoint can fail at runtime despite the throttling code being present.
+**Por qué tiene esta prioridad**: Sin la tabla, la ruta de inicio de sesión puede fallar en ejecución aunque exista el código de limitación de intentos.
 
-**Independent Test**: Apply the initial schema to an empty MySQL test database and the migration to a pre-migration test database; in both cases verify the table shape and exercise a locked login through the API.
+**Prueba independiente**: Aplicar el esquema inicial a una base de pruebas MySQL vacía y la migración a una base de pruebas anterior a la migración; en ambos casos, verificar la estructura de la tabla y probar mediante la API un inicio de sesión bloqueado.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** a fresh test database, **When** the initial schema is applied, **Then** the table required by login throttling exists with the columns and key used by the service.
-2. **Given** an existing supported schema without the throttle table, **When** the numbered migration is applied, **Then** the table is created without deleting or rewriting application records.
-3. **Given** an active lock for a fictitious account or IP, **When** that login is attempted, **Then** the API rejects it with the documented temporary-block response.
+1. **Dado** una base de pruebas nueva, **cuando** se aplique el esquema inicial, **entonces** existirá la tabla requerida para limitar intentos, con las columnas y la clave que usa el servicio.
+2. **Dado** un esquema existente compatible que no tenga la tabla de limitación, **cuando** se aplique la migración numerada, **entonces** se creará la tabla sin eliminar ni reescribir registros de la aplicación.
+3. **Dado** un bloqueo activo para una cuenta o dirección IP ficticia, **cuando** se intente iniciar sesión, **entonces** la API lo rechazará con la respuesta de bloqueo temporal documentada.
 
-### User Story 2 - Access to patient data is accountable and role-limited (Priority: P1)
+### Historia de usuario 2: el acceso a los datos de pacientes es auditable y limitado por rol (Prioridad: P1)
 
-As a patient, tutor, or health professional, I need the backend to enforce and test role permissions while recording relevant authenticated access without putting credentials or clinical details in logs.
+Como paciente, tutor o profesional de la salud, necesito que el backend aplique y pruebe los permisos por rol, y registre los accesos autenticados pertinentes sin incluir credenciales ni datos clínicos en los registros.
 
-**Why this priority**: Patient records are sensitive, and hiding interface options alone does not enforce authorization.
+**Por qué tiene esta prioridad**: Los registros de pacientes son confidenciales, y ocultar opciones en la interfaz por sí solo no aplica la autorización.
 
-**Independent Test**: Send permitted and forbidden API requests for each relevant role with fictitious users; inspect captured audit log records and confirm they contain no token, password, or clinical payload.
+**Prueba independiente**: Enviar solicitudes permitidas y denegadas a la API para cada rol pertinente usando usuarios ficticios; inspeccionar los registros de auditoría capturados y confirmar que no contengan tokens, contraseñas ni datos clínicos.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** a tutor token, **When** the tutor requests a patient outside their scope, **Then** the backend denies access.
-2. **Given** a professional role, **When** it requests an allowed operation, **Then** the backend returns the expected response; a disallowed operation is rejected.
-3. **Given** an authenticated request, **When** the response is completed, **Then** the audit record identifies the actor, action/endpoint, and outcome without logging request bodies, tokens, passwords, or unnecessary clinical data.
+1. **Dado** un token de tutor, **cuando** el tutor solicite un paciente fuera de su ámbito, **entonces** el backend denegará el acceso.
+2. **Dado** un rol profesional, **cuando** solicite una operación permitida, **entonces** el backend devolverá la respuesta esperada; una operación no permitida será rechazada.
+3. **Dada** una solicitud autenticada, **cuando** se complete la respuesta, **entonces** el registro de auditoría identificará al actor, la acción o ruta de la API y el resultado, sin registrar cuerpos de solicitudes, tokens, contraseñas ni datos clínicos innecesarios.
 
-### User Story 3 - The team can validate full backend flows and frontend behavior (Priority: P1)
+### Historia de usuario 3: el equipo puede validar flujos completos del backend y el comportamiento del frontend (Prioridad: P1)
 
-As a developer or reviewer, I need reproducible tests for important API flows and React components so that authentication, authorization, validation, and role-based UI behavior can be checked before delivery.
+Como desarrollador o revisor, necesito pruebas reproducibles para los flujos importantes de la API y los componentes React, de modo que se puedan comprobar la autenticación, la autorización, la validación y el comportamiento de la interfaz según el rol antes de la entrega.
 
-**Why this priority**: The assignment explicitly requires backend unit tests, backend end-to-end tests, frontend tests, and fictitious test data.
+**Por qué tiene esta prioridad**: La consigna exige explícitamente pruebas unitarias del backend, pruebas de extremo a extremo del backend, pruebas del frontend y datos ficticios de prueba.
 
-**Independent Test**: Run the backend unit suite, at least two HTTP end-to-end flows against an isolated test database, and the React Testing Library or Jest suite.
+**Prueba independiente**: Ejecutar la suite unitaria del backend, al menos dos flujos HTTP de extremo a extremo contra una base de pruebas aislada y la suite de React Testing Library o Jest.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** a dedicated MySQL test database, **When** the backend E2E suite runs, **Then** at least two user-visible HTTP flows pass using fictitious records and cannot connect to a database not explicitly identified as a test database.
-2. **Given** invalid or duplicate registration data, **When** the API receives it, **Then** validation rejects it without persisting an invalid account.
-3. **Given** a React registration form, **When** the selected account role changes or invalid input is submitted, **Then** the component displays the correct role-specific fields and accessible validation feedback.
+1. **Dada** una base de pruebas MySQL dedicada, **cuando** se ejecute la suite E2E del backend, **entonces** pasarán al menos dos flujos HTTP visibles para el usuario, con registros ficticios, y la suite no podrá conectarse a una base que no esté identificada explícitamente como base de pruebas.
+2. **Dados** datos de registro no válidos o duplicados, **cuando** la API los reciba, **entonces** la validación los rechazará sin guardar una cuenta no válida.
+3. **Dado** un formulario de registro React, **cuando** cambie el rol de cuenta seleccionado o se envíen datos no válidos, **entonces** el componente mostrará los campos correspondientes al rol y mensajes de validación accesibles.
 
-### User Story 4 - The submitted documentation explains the solution and its evidence (Priority: P2)
+### Historia de usuario 4: la documentación entregada explica la solución y su evidencia (Prioridad: P2)
 
-As an evaluator, I need the repository documentation to explain the nursing need, service ownership, permissions, security, design patterns, setup, and safe network-analysis evidence.
+Como evaluador, necesito que la documentación del repositorio explique la necesidad de enfermería, la responsabilidad de los servicios, los permisos, la seguridad, los patrones de diseño, la configuración y la evidencia segura del análisis de red.
 
-**Why this priority**: Complete documentation is a required deliverable and makes the implementation understandable and verifiable.
+**Por qué tiene esta prioridad**: La documentación completa es un entregable obligatorio y permite comprender y verificar la implementación.
 
-**Independent Test**: Check the README and linked documents against each required documentation topic, then follow the Wireshark lab with fictitious data and verify the evidence contains TLS rather than cleartext credentials or clinical information.
+**Prueba independiente**: Comparar el README y los documentos enlazados con cada tema requerido; luego, seguir la práctica de Wireshark con datos ficticios y verificar que la evidencia contenga tráfico TLS, no credenciales ni información clínica en texto claro.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** the README, **When** a reviewer looks for the nursing use case, services, role permissions, security, and design patterns, **Then** each is explained with its purpose and suitability.
-2. **Given** the approved team composition, **When** the README describes contributions, **Then** it lists the five existing members and states that work was shared equitably without fabricating individual ownership.
-3. **Given** a Wireshark capture, **When** it is submitted as evidence, **Then** it demonstrates the documented HTTPS/TLS test flow and contains only fictitious data with no exposed credentials, tokens, or real patient information.
+1. **Dado** el README, **cuando** un revisor busque el caso de uso de enfermería, los servicios, los permisos por rol, la seguridad y los patrones de diseño, **entonces** cada tema se explicará junto con su propósito e idoneidad.
+2. **Dada** la composición aprobada del equipo, **cuando** el README describa las contribuciones, **entonces** enumerará a los cinco integrantes existentes e indicará que el trabajo se compartió equitativamente, sin inventar responsabilidades individuales.
+3. **Dada** una captura de Wireshark, **cuando** se entregue como evidencia, **entonces** demostrará el flujo de prueba HTTPS/TLS documentado y contendrá únicamente datos ficticios, sin credenciales, tokens ni información real de pacientes expuestos.
 
-### Edge Cases
+### Casos límite
 
-- A migration is run more than once or against a schema that already has the throttle table.
-- The database is unavailable or configured with a name that is not explicitly a test database when E2E tests are enabled.
-- An authenticated request fails with a 4xx or 5xx response; the audit event must still avoid sensitive payloads.
-- A request uses an invalid role, a patient outside the caller's scope, or duplicate account data.
-- A capture contains unencrypted HTTP/MySQL traffic, credentials, or non-fictitious records; it must not be used as evidence or published.
-- The professor-approved MySQL and five-member exceptions must be described as approvals, not represented as the literal wording of the original PDF.
+- Una migración se ejecuta más de una vez o sobre un esquema que ya contiene la tabla de limitación.
+- La base de datos no está disponible o tiene un nombre que no la identifica explícitamente como base de pruebas cuando se habilitan las pruebas E2E.
+- Una solicitud autenticada falla con una respuesta 4xx o 5xx; aun así, el evento de auditoría debe evitar datos confidenciales.
+- Una solicitud usa un rol no válido, un paciente fuera del ámbito del solicitante o datos de cuenta duplicados.
+- Una captura contiene tráfico HTTP/MySQL sin cifrar, credenciales o registros no ficticios; no debe usarse como evidencia ni publicarse.
+- Las excepciones aprobadas por el profesor para MySQL y un equipo de cinco integrantes deben describirse como aprobaciones, no presentarse como si fueran el texto literal del PDF original.
 
-## Requirements
+## Requisitos
 
-### Functional Requirements
+### Requisitos funcionales
 
-- **REQ-001**: The initial MySQL schema MUST create the `login_throttle` table with the fields, uniqueness, and indexes required by the existing login lockout implementation.
-- **REQ-002**: A numbered, non-destructive migration MUST create the same table for existing installations, be safe to re-run, and be documented with a backup and application procedure.
-- **REQ-003**: The backend MUST retain login lockout behavior for account and IP scopes, return a temporary-block response when a scope is locked, and log failed attempts without recording credentials or raw identifiers.
-- **REQ-004**: Authenticated access to relevant API resources MUST produce an audit record containing a non-sensitive actor identifier, role, endpoint/action, HTTP method, and outcome; it MUST NOT include request bodies, authorization headers, passwords, tokens, or unnecessary clinical data.
-- **REQ-005**: Backend tests MUST cover at least two independent unit-level behaviors and at least two HTTP end-to-end flows using fictitious data; end-to-end tests that use MySQL MUST be opt-in and refuse to run unless the configured database is explicitly a test database.
-- **REQ-006**: Backend tests MUST include successful and denied role-based access, login throttling, input validation, and duplicate registration behavior without using real patient or account data.
-- **REQ-007**: The frontend MUST include React component tests using React Testing Library or Jest, with coverage of role-dependent fields and at least one invalid-input or error-feedback behavior.
-- **REQ-008**: Repository documentation MUST explain the nursing problem and solution, responsibilities of the three active services, the role/permission matrix, security measures, and at least three patterns with their location, the problem each solves, and why each is suitable.
-- **REQ-009**: Repository documentation MUST describe the professor-approved MySQL and five-person exceptions and the user's requested equitable group workload without inventing individual contributions.
-- **REQ-010**: Wireshark documentation MUST provide a reproducible procedure using fictitious data and explain observed protocols and protections; acceptable evidence MUST show the HTTPS/TLS flow without exposed credentials, tokens, or real clinical data.
+### Requisitos funcionales
 
-### Key Entities
+- **REQ-001**: El esquema inicial de MySQL DEBE crear la tabla `login_throttle` con los campos, las restricciones de unicidad y los índices que requiere la implementación existente del bloqueo de inicio de sesión.
+- **REQ-002**: Una migración numerada y no destructiva DEBE crear la misma tabla para instalaciones existentes, poder ejecutarse más de una vez de forma segura y documentarse junto con el procedimiento para realizar una copia de seguridad y aplicarla.
+- **REQ-003**: El backend DEBE conservar el comportamiento de bloqueo de inicio de sesión para ámbitos de cuenta y dirección IP, devolver una respuesta de bloqueo temporal cuando un ámbito esté bloqueado y registrar los intentos fallidos sin guardar credenciales ni identificadores sin procesar.
+- **REQ-004**: El acceso autenticado a los recursos pertinentes de la API DEBE generar un registro de auditoría con un identificador de actor no confidencial, rol, ruta/acción de la API, método HTTP y resultado; NO DEBE incluir cuerpos de solicitudes, encabezados de autorización, contraseñas, tokens ni datos clínicos innecesarios.
+- **REQ-005**: Las pruebas del backend DEBEN cubrir al menos dos comportamientos unitarios independientes y al menos dos flujos HTTP de extremo a extremo con datos ficticios; las pruebas de extremo a extremo que usen MySQL DEBEN habilitarse explícitamente y negarse a ejecutarse si la base configurada no está identificada expresamente como base de pruebas.
+- **REQ-006**: Las pruebas del backend DEBEN incluir acceso permitido y denegado según el rol, limitación de intentos de inicio de sesión, validación de entradas y registro duplicado, sin usar datos reales de pacientes ni cuentas.
+- **REQ-007**: El frontend DEBE incluir pruebas de componentes React con React Testing Library o Jest, que cubran campos dependientes del rol y al menos un comportamiento de datos no válidos o mensajes de error.
+- **REQ-008**: La documentación del repositorio DEBE explicar el problema y la solución de enfermería, las responsabilidades de los tres servicios activos, la matriz de roles y permisos, las medidas de seguridad y al menos tres patrones, indicando dónde se usan, qué problema resuelve cada uno y por qué es adecuado.
+- **REQ-009**: La documentación del repositorio DEBE describir las excepciones aprobadas por el profesor para MySQL y un equipo de cinco integrantes, así como la distribución equitativa del trabajo solicitada por el usuario, sin inventar contribuciones individuales.
+- **REQ-010**: La documentación de Wireshark DEBE proporcionar un procedimiento reproducible con datos ficticios y explicar los protocolos y las protecciones observados; la evidencia aceptable DEBE mostrar el flujo HTTPS/TLS sin credenciales, tokens ni datos clínicos reales expuestos.
 
-- **Throttle entry**: A hashed account/IP scope, number and start time of failed attempts, and optional temporary lock expiry.
-- **Audit event**: A non-sensitive actor identifier and role, operation/endpoint, method, result status, and timestamp.
-- **Test account and patient**: Synthetic identities and records restricted to automated test environments.
-- **Team contribution statement**: The existing member list and a truthful statement that work was shared equitably.
-- **Network evidence**: A capture and short explanation of a fictitious HTTPS/TLS scenario.
+### Entidades principales
 
-## Assumptions
+- **Registro de limitación**: ámbito de cuenta/dirección IP con hash, cantidad y hora inicial de los intentos fallidos y vencimiento opcional del bloqueo temporal.
+- **Evento de auditoría**: identificador y rol no confidenciales del actor, operación/ruta de la API, método, estado del resultado y fecha y hora.
+- **Cuenta y paciente de prueba**: identidades y registros sintéticos restringidos a entornos de pruebas automatizadas.
+- **Declaración de contribuciones del equipo**: lista de integrantes existentes y afirmación veraz de que el trabajo se distribuyó equitativamente.
+- **Evidencia de red**: captura y breve explicación de un escenario HTTPS/TLS ficticio.
 
-- The professor's approval of MySQL and a maximum of five members is valid for this submission.
-- The product remains an educational prototype; tests and demonstrations use only fictitious data.
-- Existing Flask business behavior and API contracts should be preserved unless a focused failing test proves a change is required.
-- A live MySQL server may not be available in the implementation environment. Database-backed E2E tests must be prepared safely, but their live execution result must be reported honestly.
-- The existing `.pcapng` file is not acceptable as TLS evidence because protocol metadata shows HTTP and MySQL traffic with no TLS frames. Its packet payloads must not be examined or republished.
+## Suposiciones
 
-## Success Criteria
+- La aprobación del profesor para usar MySQL y un equipo de hasta cinco integrantes es válida para esta entrega.
+- El producto sigue siendo un prototipo educativo; las pruebas y demostraciones usan únicamente datos ficticios.
+- Se debe conservar el comportamiento funcional existente de Flask y los contratos de la API, salvo que una prueba específica que falle demuestre que es necesario cambiar algo.
+- Es posible que no haya un servidor MySQL en ejecución en el entorno de implementación. Las pruebas E2E con base de datos deben prepararse de forma segura, pero su resultado de ejecución debe informarse con honestidad.
+- El archivo `.pcapng` existente no es aceptable como evidencia TLS porque los metadatos del protocolo muestran tráfico HTTP y MySQL, sin tramas TLS. No se deben examinar ni volver a publicar las cargas útiles de sus paquetes.
 
-### Measurable Outcomes
+## Criterios de éxito
 
-- **SC-001**: Applying either the initial schema or the migration to its intended test setup produces the complete throttle table, and the login flow can read and write it.
-- **SC-002**: At least two backend HTTP end-to-end flows and at least two meaningful React component tests pass using fictitious data.
-- **SC-003**: All tested role/permission cases return the expected allow/deny result, including one request that is denied for out-of-scope patient access.
-- **SC-004**: Audit logs identify authenticated operations while tests confirm that tokens, passwords, request bodies, and clinical payloads are absent.
-- **SC-005**: The README and linked documentation cover all required delivery topics; the five-person group and MySQL are identified as professor-approved exceptions.
-- **SC-006**: Any capture submitted as security evidence shows the documented TLS-protected flow and contains no credentials, tokens, or real patient data.
+### Resultados medibles
+
+- **SC-001**: Al aplicar el esquema inicial o la migración a su entorno de pruebas previsto, se crea la tabla de limitación completa y el flujo de inicio de sesión puede leerla y escribir en ella.
+- **SC-002**: Pasan al menos dos flujos HTTP de extremo a extremo del backend y al menos dos pruebas significativas de componentes React con datos ficticios.
+- **SC-003**: Todos los casos probados de roles y permisos devuelven el resultado esperado de autorización o denegación, incluida una solicitud denegada por intentar acceder a un paciente fuera del ámbito permitido.
+- **SC-004**: Los registros de auditoría identifican las operaciones autenticadas y las pruebas confirman que no incluyen tokens, contraseñas, cuerpos de solicitudes ni datos clínicos.
+- **SC-005**: El README y la documentación enlazada cubren todos los temas de entrega requeridos; el equipo de cinco integrantes y MySQL se identifican como excepciones aprobadas por el profesor.
+- **SC-006**: Toda captura presentada como evidencia de seguridad muestra el flujo protegido por TLS documentado y no contiene credenciales, tokens ni datos reales de pacientes.

@@ -1,80 +1,84 @@
 <!--
-Sync Impact Report
-Version change: none -> 1.0.0 (initial project-specific constitution for this delivery).
-Modified principles: none.
-Added sections: five core principles, additional constraints, development workflow, governance.
-Removed sections: target technology stack (UPGRADE mode; the existing stack is retained).
-Templates requiring updates: implementation plan Constitution Check (pending); feature specification (checked); task template (pending).
-Follow-up TODOs: confirm the formal ratification date with the project team.
+Informe de impacto de sincronización
+Cambio de versión: ninguna -> 1.0.0 (constitución inicial específica del proyecto para esta entrega).
+Principios modificados: ninguno.
+Secciones añadidas: cinco principios fundamentales, restricciones adicionales, flujo de desarrollo y gobernanza.
+Secciones eliminadas: tecnologías objetivo (modo UPGRADE; se conserva la pila existente).
+Plantillas que requieren actualización: verificación de la constitución en el plan de implementación (pendiente); especificación de funcionalidades (revisada); plantilla de tareas (pendiente).
+Pendientes de seguimiento: confirmar con el equipo del proyecto la fecha formal de ratificación.
 -->
 
-# PediaCare+ Delivery Constitution
+# Constitución de entrega de PediaCare+
 
-## Migration Mode
+## Modo de migración
 
-**Mode**: UPGRADE
+**Modo**: UPGRADE
 
-**Justification**: This work completes requirements in the existing PediaCare+ repository. It preserves
-the current product, API contract, React interface, Flask services, and approved MySQL database.
+**Justificación**: Este trabajo completa los requisitos del repositorio existente de PediaCare+. Conserva
+el producto actual, el contrato de la API, la interfaz React, los servicios Flask y la base de datos MySQL aprobada.
 
-## Core Principles
+## Principios fundamentales
 
-### I. Preserve Existing Behavior
+### I. Conservar el comportamiento existente
 
-Changes MUST be limited to the approved requirement gaps and preserve existing user-facing behavior,
-API contracts, and stored data. Database changes MUST be additive and non-destructive; existing
-records MUST NOT be dropped or rewritten by a migration.
+Los cambios DEBEN limitarse a las brechas de requisitos aprobadas y conservar el comportamiento visible
+para los usuarios, los contratos de la API y los datos almacenados. Los cambios de base de datos DEBEN
+ser aditivos y no destructivos; las migraciones NO DEBEN eliminar ni reescribir registros existentes.
 
-### II. Protect Patient and Account Data
+### II. Proteger los datos de pacientes y cuentas
 
-Tests and demonstrations MUST use fictitious data. Logs MUST NOT contain passwords, tokens,
-authorization headers, request bodies, or unnecessary clinical information. Every protected action
-MUST be authorized by the backend, regardless of frontend visibility.
+Las pruebas y demostraciones DEBEN usar datos ficticios. Los registros NO DEBEN contener contraseñas,
+tokens, encabezados de autorización, cuerpos de solicitudes ni información clínica innecesaria. Toda
+acción protegida DEBE ser autorizada por el backend, independientemente de su visibilidad en el frontend.
 
-### III. Verify Behavior with Tests
+### III. Verificar el comportamiento mediante pruebas
 
-Each behavior change MUST have a focused regression test. Backend and frontend tests MUST use
-deterministic fictitious data. Any database-backed end-to-end test MUST require an explicit opt-in
-and refuse to connect unless the configured database is clearly a test database.
+Cada cambio de comportamiento DEBE contar con una prueba de regresión específica. Las pruebas del
+backend y frontend DEBEN usar datos ficticios deterministas. Toda prueba de extremo a extremo que use
+una base de datos DEBE requerir habilitación explícita y negarse a conectar si la base configurada no
+está claramente identificada como base de pruebas.
 
-### IV. Keep Changes Traceable and Understandable
+### IV. Mantener los cambios trazables y comprensibles
 
-Every implementation task MUST map to one or more specification requirements. Documentation MUST
-explain the relevant user need, service ownership, permissions, security controls, and design-pattern
-choices in terms that reviewers can verify against the code.
+Cada tarea de implementación DEBE corresponder a uno o más requisitos de la especificación. La
+documentación DEBE explicar la necesidad del usuario, la responsabilidad de cada servicio, los
+permisos, los controles de seguridad y la elección de patrones de diseño, de forma que quienes revisen
+el proyecto puedan contrastarlos con el código.
 
-### V. Prefer Small, Reliable Changes
+### V. Preferir cambios pequeños y confiables
 
-Use the repository's existing patterns and dependencies where practical. Add abstractions or
-dependencies only when they directly enable a requirement. Errors and unverified evidence MUST be
-reported accurately rather than represented as successful completion.
+Usar los patrones y las dependencias existentes en el repositorio cuando sea práctico. Añadir
+abstracciones o dependencias únicamente cuando permitan cumplir un requisito directamente. Los errores
+y la evidencia no verificada DEBEN informarse con precisión, no presentarse como trabajo completado.
 
-## Additional Constraints
+## Restricciones adicionales
 
-- MySQL is approved by the professor in place of MongoDB for this project.
-- A five-person team is approved by the professor despite the original PDF's four-person limit.
-- The team contribution statement MUST describe equitable shared work and MUST NOT invent individual
-  assignments.
-- The product is an educational prototype and MUST NOT be used with real patient information.
-- A network capture is acceptable as security evidence only when it uses fictitious data and
-  demonstrates the documented HTTPS/TLS flow without exposing credentials or clinical information.
+- El profesor aprobó MySQL en lugar de MongoDB para este proyecto.
+- El profesor aprobó un equipo de cinco integrantes, aunque el PDF original limite el equipo a cuatro.
+- La declaración de contribuciones del equipo DEBE describir un trabajo compartido equitativamente y
+  NO DEBE inventar asignaciones individuales.
+- El producto es un prototipo educativo y NO DEBE usarse con información real de pacientes.
+- Una captura de red solo se acepta como evidencia de seguridad si usa datos ficticios y demuestra el
+  flujo HTTPS/TLS documentado sin exponer credenciales ni información clínica.
 
-## Development Workflow
+## Flujo de desarrollo
 
-- Review the relevant source, tests, and current documentation before changing behavior.
-- Add or update focused tests with implementation changes; run the narrowest relevant test first.
-- Run the repository's build, lint, and test commands after coherent changes.
-- Apply schema updates only to a new or explicitly selected test database during validation.
-- Report skipped database-backed tests and missing Wireshark evidence explicitly.
+- Revisar el código fuente, las pruebas y la documentación actual pertinentes antes de cambiar el comportamiento.
+- Añadir o actualizar pruebas específicas junto con los cambios de implementación; ejecutar primero la prueba pertinente más acotada.
+- Ejecutar los comandos de compilación, análisis estático y pruebas del repositorio después de cada conjunto coherente de cambios.
+- Durante la validación, aplicar actualizaciones del esquema solo a una base de pruebas nueva o seleccionada explícitamente.
+- Informar explícitamente las pruebas que usen base de datos y se hayan omitido, así como la falta de evidencia de Wireshark.
 
-## Governance
+## Gobernanza
 
-This constitution governs the requirement-completion work described by the linked feature
-specification. Amendments require a documented rationale, explicit agreement from the project team,
-and an update to the semantic version and last-amended date. MINOR increments add or materially
-change a principle; PATCH clarifies wording without changing obligations; MAJOR changes or removes
-an existing obligation. Reviews MUST check requirement traceability, test evidence, data safety, and
-documentation consistency. Approval of MySQL and five team members is recorded as a project-specific
-exception to the original assignment, not as a change to the assignment itself.
+Esta constitución rige el trabajo de cumplimiento de requisitos descrito en la especificación de
+funcionalidades enlazada. Las modificaciones requieren una justificación documentada, el acuerdo
+explícito del equipo del proyecto y la actualización de la versión semántica y la fecha de la última
+modificación. Los incrementos MINOR añaden o modifican sustancialmente un principio; PATCH aclara la
+redacción sin cambiar las obligaciones; MAJOR cambia o elimina una obligación existente. Las
+revisiones DEBEN comprobar la trazabilidad de requisitos, la evidencia de pruebas, la seguridad de los
+datos y la coherencia de la documentación. La aprobación de MySQL y de un equipo de cinco integrantes
+se registra como una excepción específica del proyecto a la consigna original, no como una modificación
+de la consigna.
 
-**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): confirm with the project team | **Last Amended**: 2026-11-13
+**Versión**: 1.0.0 | **Ratificada**: PENDIENTE(FECHA_DE_RATIFICACIÓN): confirmar con el equipo del proyecto | **Última modificación**: 2026-11-13
