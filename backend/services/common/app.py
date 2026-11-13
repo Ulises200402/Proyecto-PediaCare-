@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, send_file
+from flask import Flask, g, jsonify, request, send_file
 from flask_cors import CORS
 from flask.json.provider import DefaultJSONProvider
 from werkzeug.exceptions import HTTPException
@@ -88,6 +88,16 @@ def create_service(name, blueprint, port):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Cache-Control"] = "no-store"
+        user = getattr(g, "user", None)
+        if user and request.path.startswith("/api/"):
+            app.logger.info(
+                "audit actor_id=%s actor_role=%s endpoint=%s method=%s status=%s",
+                user["id"],
+                user["role"],
+                request.endpoint or "unknown",
+                request.method,
+                response.status_code,
+            )
         return response
 
     @app.errorhandler(404)

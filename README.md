@@ -20,6 +20,20 @@ La aplicación está pensada para tres tipos de usuarios:
 
 El paciente es un registro del sistema, no un usuario ni un actor con inicio de sesión. Cada paciente se vincula directamente con uno o dos tutores: `id_tutor_1` obligatorio e `id_tutor_2` opcional. No se comparte la cuenta entre padre y madre.
 
+## Necesidad de enfermería y solución
+
+El seguimiento de tratamientos pediátricos requiere coordinar medicación, dosis, horarios y
+administraciones entre profesionales, además de mantener informadas a las familias. Cuando esos
+datos se gestionan por separado, es más difícil reconocer una dosis pendiente, registrar una
+administración omitida o identificar quién debe realizar el seguimiento.
+
+PediaCare+ reúne los planes de medicación y sus recordatorios en la ficha del paciente. Enfermería
+puede registrar planes, consultar dosis pendientes y dejar constancia de las dosis administradas u
+omitidas. Los recordatorios activos se asignan entre enfermeros procurando equilibrar la carga, y
+los cambios relevantes pueden generar notificaciones dentro de la aplicación para los tutores.
+La herramienta organiza el registro y la comunicación; no reemplaza el criterio profesional ni
+debe usarse para tomar decisiones clínicas.
+
 ## Estado actual
 
 - El frontend ofrece login y registro conectados a la API. El registro cambia sus campos según el rol; la sesión se mantiene en `sessionStorage` y el dashboard carga los pacientes permitidos.
@@ -30,8 +44,8 @@ El paciente es un registro del sistema, no un usuario ni un actor con inicio de 
 - La API protegida está implementada en tres servicios Flask separados: identidad y pacientes, clínica, y turnos y notificaciones. Los tres conservan el contrato `/api` que consume React y usan MySQL.
 - Los avisos se muestran dentro de la aplicación. Las solicitudes de turno quedan pendientes de confirmación profesional; no se envían correos ni SMS.
 - Usuarios y pacientes tienen DNI único por tabla. Las altas nuevas lo requieren y las búsquedas de pacientes usan nombre o DNI; los IDs quedan como referencias internas.
-- El esquema inicial está en `db/pedia_care.sql`; los datos ficticios están en `db/pedia_care_datos_prueba.sql` y se pueden quitar con `db/pedia_care_borrar_datos_prueba.sql`. Actualmente no existe `db/migrations/` en el repositorio.
-- El login implementa limitación de intentos mediante la tabla `login_throttle`, pero el esquema `db/pedia_care.sql` actual no crea esa tabla y no hay una migración disponible en el repositorio. Una base nueva creada solo con ese SQL puede devolver un error al iniciar sesión hasta que se agregue la tabla requerida.
+- El esquema inicial está en `db/pedia_care.sql`; incluye `login_throttle`. Los datos ficticios están en `db/pedia_care_datos_prueba.sql` y se pueden quitar con `db/pedia_care_borrar_datos_prueba.sql`.
+- Para bases existentes, `db/migrations/004_login_throttle.sql` crea de forma idempotente la tabla requerida por el bloqueo de inicio de sesión sin modificar los registros de la aplicación.
 - Es un prototipo educativo. Usar únicamente datos ficticios: no cargar información personal ni clínica real, ni utilizarlo para tomar decisiones de atención.
 
 ## Estructura
@@ -45,10 +59,10 @@ db/                Esquema y scripts de datos ficticios para MySQL
 docs/              OpenAPI y documentación del proyecto
 frontend/public/   Logotipos, iconos y otros archivos estáticos
 frontend/src/      Aplicación React, vistas, datos demo y cliente API
-.github/           Documentos de análisis, incluido el diagrama de arquitectura
+.github/           Configuración de GitHub y artefactos de modernización
 ```
 
-En resumen, `backend/services/` contiene la API Flask activa, `backend/src/` el backend Express heredado, `frontend/src/` la interfaz, `db/` los scripts MySQL y `docs/` el contrato OpenAPI y otros documentos. El diagrama se encuentra en [.github/modernize/assessment/engines/facts/architecture-diagram.md](.github/modernize/assessment/engines/facts/architecture-diagram.md).
+En resumen, `backend/services/` contiene la API Flask activa, `backend/src/` el backend Express heredado, `frontend/src/` la interfaz, `db/` los scripts MySQL y `docs/` el contrato OpenAPI y la documentación del proyecto. El diagrama está disponible directamente en [docs/architecture-diagram.md](docs/architecture-diagram.md).
 
 El directorio `backend/src/` conserva la implementación Express anterior como referencia y para pruebas de regresión; `npm run dev` no la inicia como servidor. Los servicios activos están en `backend/services/`.
 
@@ -94,8 +108,10 @@ Remove-Variable secret, bytes
 Ejecutar esto una sola vez al preparar el archivo. Si `JWT_SECRET` también está definido como variable de entorno de Windows, esa variable tiene prioridad sobre `backend/.env`; quitarla de la terminal actual con `Remove-Item Env:JWT_SECRET` para que se use el valor del archivo.
 
 ```powershell
-# 4. Crear el esquema ejecutando db/pedia_care.sql
+# 4. En una instalación nueva, crear el esquema ejecutando db/pedia_care.sql
 #    desde MySQL Workbench o tu cliente MySQL preferido.
+#    Para una base existente, aplicar solo db/migrations/004_login_throttle.sql
+#    seleccionando primero la base pedia_care; no volver a ejecutar el esquema inicial.
 # 5. (Opcional) En una base nueva y sin datos, cargar los datos ficticios
 #    ejecutando db/pedia_care_datos_prueba.sql una sola vez.
 
@@ -105,7 +121,10 @@ npm run dev
 
 `npm run dev` inicia Vite en `http://localhost:5173` y los tres servicios Flask. El HTTPS de Vite es opcional: solo se activa si existen ambos certificados en `frontend/.certs/localhost-key.pem` y `frontend/.certs/localhost.pem`. Las API Flask siguen usando HTTP local detrás del proxy.
 
-No subir `backend/.env` al repositorio. `db/pedia_care.sql` es un esquema inicial, no una actualización automática: no volver a ejecutarlo sobre una base existente con datos. Como no hay scripts de migración en el checkout actual, cualquier actualización de una base existente debe planificarse y respaldarse aparte.
+No subir `backend/.env` al repositorio. `db/pedia_care.sql` es un esquema inicial, no una
+actualización automática: no volver a ejecutarlo sobre una base existente con datos. Para la
+actualización de `login_throttle`, respaldar la base y ejecutar una sola vez
+`db/migrations/004_login_throttle.sql` en la base `pedia_care`.
 
 Para ejecutar solo una parte:
 
@@ -144,18 +163,36 @@ Además, la API ofrece:
 
 `db/pedia_care_datos_prueba.sql` contiene usuarios y registros clínicos sintéticos con DNI ficticios. Ejecutarlo una sola vez y únicamente sobre una base recién creada y sin datos; usa IDs fijos, no sirve para reiniciar una instalación y no debe ejecutarse sobre una base que contenga información a conservar.
 
-El encabezado de `db/pedia_care.sql` indica que el esquema incorpora cambios históricos de DNI y asignación de recordatorios. Sin embargo, esos archivos de migración ya no están presentes en este repositorio. Para bases existentes, no aplicar instrucciones de migración antiguas a ciegas: comparar el esquema y hacer una copia de seguridad antes de cualquier cambio.
+La base de datos continúa en MySQL por autorización del profesor; no se requiere migrarla a MongoDB.
+La migración `004_login_throttle.sql` se limita a crear la tabla de bloqueo y no reemplaza ni
+actualiza los cambios históricos de DNI o recordatorios. Antes de aplicar cualquier script sobre
+una instalación existente, verificar su esquema y realizar una copia de seguridad.
 
 Las cuentas pueden crearse desde el formulario de registro. Las de médico/enfermería requieren códigos de habilitación del servidor. Para alta local también está `npm run user:create`. Las contraseñas se almacenan con bcrypt.
 
+## Roles y permisos
+
+| Rol | Accesos principales | Restricciones |
+|---|---|---|
+| Padre/Madre | Consultar únicamente pacientes donde figura como tutor; ver historial e indicaciones destinadas a la familia; solicitar o cancelar turnos propios; consultar notificaciones y administrar preferencias. | No crea ni modifica fichas, consultas, medicación, dosis o vacunas. |
+| Médico | Consultar pacientes e historiales; crear pacientes; registrar y mantener consultas; consultar métricas; gestionar vacunas y estados de turnos. | Las operaciones protegidas requieren una cuenta activa y validación backend del rol. |
+| Enfermería | Consultar pacientes; registrar planes de medicación; asignar recordatorios; registrar dosis administradas u omitidas; gestionar registros de vacunas; atender estados de turnos permitidos. | No crea ni modifica consultas médicas. Las rutas restringidas se validan en el backend. |
+
+El backend valida el JWT, el estado de la cuenta y el rol en cada operación protegida. El alcance de
+pacientes también se aplica en las consultas de datos; ocultar una opción en React no reemplaza esa
+autorización.
+
 ## Seguridad, patrones y pruebas
 
-- **Fuerza bruta:** el código de login consulta la tabla `login_throttle` y limita intentos por cuenta e IP usando hashes, con bloqueo de 15 minutos al alcanzar cinco fallos por cuenta o veinte por IP. Esa tabla no está incluida en el `db/pedia_care.sql` actual y tampoco hay una migración disponible; debe agregarse al esquema antes de depender de esta función en una instalación nueva.
-- **Datos y credenciales:** todas las consultas usan parámetros PyMySQL; las contraseñas se hashean con bcrypt; JWT expira en una hora y consulta el estado de la cuenta en cada petición. Códigos, JWT y contraseñas se obtienen del entorno y no se registran.
+- **Fuerza bruta:** el login limita intentos por cuenta e IP usando hashes; bloquea durante 15 minutos al alcanzar cinco fallos por cuenta o veinte por IP, registra intentos fallidos sin guardar el identificador original y limpia el estado tras un acceso correcto.
+- **Acceso y auditoría:** el backend exige JWT vigente, cuenta activa y rol permitido; el acceso de tutores se limita a sus pacientes. Los registros de auditoría identifican actor, rol, endpoint, método y resultado, sin incluir headers, parámetros, cuerpo, tokens, contraseñas ni datos clínicos.
+- **Datos y credenciales:** las consultas MySQL usan parámetros PyMySQL; las contraseñas se hashean con bcrypt; los JWT vencen en una hora. Códigos, JWT y contraseñas se obtienen del entorno y no se registran.
 - **CORS:** limitado a los orígenes enumerados en `CORS_ORIGINS`; no usar `*` en despliegues.
-- **TLS:** Vite puede servir HTTPS local si se configuran los certificados indicados arriba. En este checkout no se incluye la guía de Wireshark ni una captura de tráfico.
+- **TLS/Wireshark:** Vite admite HTTPS local con certificados de desarrollo en `frontend/.certs/`. La guía [docs/wireshark-lab.md](docs/wireshark-lab.md) describe la captura reproducible con datos ficticios; la evidencia segura [docs/pedia-care-tls-api-ficticia.pcapng](docs/pedia-care-tls-api-ficticia.pcapng) fue verificada con 8 paquetes TLS y 0 paquetes HTTP. La captura preexistente `docs/PediaCare Prueba 1.pcapng` muestra protocolos HTTP y MySQL sin TLS según sus metadatos; no demuestra tráfico cifrado y no debe usarse como evidencia de seguridad. No se inspeccionan ni publican sus cargas útiles.
 - **Swagger/OpenAPI:** catálogo completo de rutas en [docs/openapi.json](docs/openapi.json), disponible mediante Swagger UI en `http://localhost:5173/api/docs` (o `https://localhost:5173/api/docs` con certificado local).
-- **Patrones implementados:** Application Factory en `common/app.py` configura cada Flask independiente; Strategy en `common/access.py` selecciona la política de lectura por rol; Observer en `common/events.py` distribuye en la misma transacción los eventos de cambios clínicos a los tutores con preferencias habilitadas.
+- **Application Factory:** `backend/services/common/app.py#create_service` centraliza la creación y configuración compartida de cada servicio Flask. Evita duplicar CORS, seguridad, serialización y manejo de errores, manteniendo cada servicio independiente.
+- **Strategy:** `backend/services/common/access.py#patient_access_filter` aplica reglas distintas de alcance de pacientes según el rol. Es adecuado porque los tutores ven solo a sus hijos mientras los profesionales consultan según sus permisos.
+- **Observer:** `backend/services/common/events.py#NotificationEventBus` permite que los servicios publiquen cambios y que los observadores creen notificaciones dentro de la transacción correspondiente. Desacopla el origen del evento del almacenamiento de avisos.
 - **Limitación de datos:** usar exclusivamente datos ficticios. El prototipo no es un sistema clínico certificado y no debe guardar información real.
 
 ## Comandos útiles
@@ -170,10 +207,19 @@ npm test
 
 `npm test` ejecuta las pruebas heredadas de Express, las pruebas unitarias y HTTP de los servicios Flask y las pruebas del cliente React. Las pruebas nuevas de Flask no requieren una base MySQL activa.
 
+`npm test` también ejecuta los tests de componentes React y los escenarios de navegador Playwright.
+Instalar Chromium una vez con `npm exec --prefix frontend -- playwright install chromium`.
+Los dos flujos Flask que requieren persistencia MySQL se omiten por defecto. Para habilitarlos,
+configurar `PEDIACARE_E2E=1` y `DB_NAME` con el nombre de una base de prueba que termine en `_test`;
+los tests fallan de forma segura si el nombre no cumple esa condición. La provisión de esa base
+debe hacerse en una instancia aislada y con datos ficticios.
+
 ## Tecnologías
 
 - **Frontend:** React, Vite y Lucide.
 - **Backend activo:** Python, Flask, PyMySQL, JWT y bcrypt.
 - **Base de datos:** MySQL.
 
-Los nombres del equipo permanecen como estaban. La consigna del PDF limita el equipo a cuatro integrantes; por decisión del usuario, el README conserva cinco, por lo que ese punto administrativo continúa pendiente.
+La composición de cinco integrantes y el uso de MySQL fueron autorizados por el profesor. La
+consigna original del PDF indica cuatro integrantes y MongoDB; estas dos diferencias se documentan
+como excepciones aprobadas, no como requisitos pendientes.

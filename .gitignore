@@ -33,3 +33,5 @@ __pycache__/
 .venv/
 venv/
 frontend/.certs/
+frontend/playwright-report/
+frontend/test-results/

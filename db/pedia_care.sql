@@ -11,6 +11,15 @@ CREATE DATABASE IF NOT EXISTS pedia_care
   COLLATE utf8mb4_unicode_ci;
 USE pedia_care;
 
+CREATE TABLE login_throttle (
+    scope_hash CHAR(64) PRIMARY KEY,
+    failed_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    first_failed_at DATETIME NOT NULL,
+    locked_until DATETIME,
+    INDEX idx_login_throttle_first_failed (first_failed_at),
+    INDEX idx_login_throttle_locked_until (locked_until)
+) ENGINE=InnoDB;
+
 CREATE TABLE usuario (
     id_usuario INT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,

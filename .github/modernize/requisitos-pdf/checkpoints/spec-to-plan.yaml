@@ -1,0 +1,129 @@
+metadata:
+  generated: "2026-11-13"
+  source_spec: ".github/modernize/requisitos-pdf/spec.md"
+  target_plan: ".github/modernize/requisitos-pdf/plan.md"
+
+summary:
+  total_requirements: 10
+  covered_requirements: 10
+  missing_requirements: 0
+  coverage_percentage: 100.0
+
+requirements:
+  - req_id: "REQ-001"
+    req_description: "Fresh MySQL schema creates the login-throttle table."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-2"
+      phase_name: "Foundational database and login protection"
+      items:
+        - item_id: "2.1"
+          description: "Restore the login-throttle schema."
+    notes: ""
+  - req_id: "REQ-002"
+    req_description: "Existing databases receive a safe, idempotent migration."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-2"
+      phase_name: "Foundational database and login protection"
+      items:
+        - item_id: "2.1"
+          description: "Restore the login-throttle schema."
+    notes: ""
+  - req_id: "REQ-003"
+    req_description: "Login lockout behavior and safe failed-login logging are tested."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-2"
+      phase_name: "Foundational database and login protection"
+      items:
+        - item_id: "2.2"
+          description: "Verify throttling behavior."
+    notes: ""
+  - req_id: "REQ-004"
+    req_description: "Authenticated API accesses produce privacy-safe audit records."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-3"
+      phase_name: "User Story 2 — accountable, role-limited access"
+      items:
+        - item_id: "3.1"
+          description: "Add minimal authenticated-access audit records."
+        - item_id: "3.2"
+          description: "Verify role and log privacy."
+    notes: ""
+  - req_id: "REQ-005"
+    req_description: "Backend tests include two guarded database-backed API E2E flows."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-4"
+      phase_name: "User Story 3 — reproducible backend and frontend tests"
+      items:
+        - item_id: "4.1"
+          description: "Add guarded MySQL-backed API end-to-end tests."
+    notes: ""
+  - req_id: "REQ-006"
+    req_description: "Authentication, role access, validation, and duplicate cases use fictitious data."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-2/3/4"
+      phase_name: "Database, access, and test journeys"
+      items:
+        - item_id: "2.2"
+          description: "Verify throttling behavior."
+        - item_id: "3.2"
+          description: "Verify role and log privacy."
+        - item_id: "4.1"
+          description: "Add guarded MySQL-backed API end-to-end tests."
+    notes: ""
+  - req_id: "REQ-007"
+    req_description: "Frontend tests cover role-dependent fields and invalid feedback."
+    priority: "P1"
+    plan_mapping:
+      phase: "Phase-1/4"
+      phase_name: "Test setup and frontend behavior"
+      items:
+        - item_id: "1.1"
+          description: "Add frontend test infrastructure."
+        - item_id: "4.2"
+          description: "Test role-dependent registration and browser behavior."
+    notes: ""
+  - req_id: "REQ-008"
+    req_description: "Documentation explains the nursing need, services, roles, security, and patterns."
+    priority: "P2"
+    plan_mapping:
+      phase: "Phase-5"
+      phase_name: "User Story 4 — complete delivery documentation and network evidence"
+      items:
+        - item_id: "5.1"
+          description: "Document nursing need, responsibilities, patterns, roles, and approved exceptions."
+    notes: ""
+  - req_id: "REQ-009"
+    req_description: "Documentation records approved MySQL and five-person deviations and shared workload."
+    priority: "P2"
+    plan_mapping:
+      phase: "Phase-5"
+      phase_name: "User Story 4 — complete delivery documentation and network evidence"
+      items:
+        - item_id: "5.1"
+          description: "Document nursing need, responsibilities, patterns, roles, and approved exceptions."
+    notes: ""
+  - req_id: "REQ-010"
+    req_description: "Wireshark documentation and evidence demonstrate safe HTTPS/TLS traffic."
+    priority: "P2"
+    plan_mapping:
+      phase: "Phase-5"
+      phase_name: "User Story 4 — complete delivery documentation and network evidence"
+      items:
+        - item_id: "5.2"
+          description: "Provide safe Wireshark procedure and TLS evidence."
+    notes: "Existing capture is not accepted as TLS evidence."
+
+missing_requirements: []
+orphan_plan_items: []
+
+validation:
+  passed: true
+  errors: []
+  warnings:
+    - "Live MySQL E2E and replacement TLS capture depend on local infrastructure and will be reported as unverified if unavailable."

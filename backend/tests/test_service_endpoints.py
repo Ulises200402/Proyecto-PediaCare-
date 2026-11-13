@@ -59,6 +59,39 @@ def test_patient_listing_authenticates_and_applies_parent_scope(monkeypatch):
     assert response.json["data"] == rows
 
 
+def test_parent_is_denied_doctor_only_consultation_creation(monkeypatch):
+    from services.common import security
+    from services.clinical import app as clinical_module
+
+    app = create_clinical_app()
+    monkeypatch.setattr(
+        security,
+        "active_user",
+        lambda _user_id: {
+            "id_usuario": 9,
+            "nombre": "Tutor Ficticio",
+            "dni": "12345678",
+            "email": "tutor@example.test",
+            "rol": "PADRE_MADRE",
+            "activo": 1,
+        },
+    )
+    monkeypatch.setattr(
+        clinical_module,
+        "transaction",
+        lambda: (_ for _ in ()).throw(AssertionError("database must not be accessed")),
+    )
+
+    response = app.test_client().post(
+        "/api/consultations",
+        headers={"Authorization": f"Bearer {_token(app, 9, 'PADRE_MADRE')}"},
+        json={},
+    )
+
+    assert response.status_code == 403
+    assert response.json["error"]
+
+
 def test_clinical_vaccine_listing_accepts_a_valid_professional_token(monkeypatch):
     from services.common import security
     from services.clinical import app as clinical_module

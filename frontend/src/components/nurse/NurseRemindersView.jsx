@@ -72,10 +72,14 @@ export default function NurseRemindersView({
   }
 
   function confirmWarningAdministration() {
-    if (warningModalReminder) {
-      onAdministerDose(warningModalReminder.id)
+    if (!warningModalReminder) return
+    if (warningType === 'DUPLICATE') {
       setWarningModalReminder(null)
+      return
     }
+
+    onAdministerDose(warningModalReminder.id)
+    setWarningModalReminder(null)
   }
 
   function handleConfirmOmit() {
@@ -258,14 +262,14 @@ export default function NurseRemindersView({
                       Omitir dosis
                     </button>
                   </>
-                ) : canAdminister ? (
+                ) : canAdminister && isDone ? (
                   <button
                     type="button"
                     className="action-btn action-btn--secondary action-btn--small"
                     onClick={() => handleAdministerClick(rem)}
-                    title="Registrar dosis adicional / advertencia"
+                    title="Mostrar advertencia de dosis duplicada"
                   >
-                    Repetir registro
+                    Ver alerta de dosis duplicada
                   </button>
                 ) : null}
 
@@ -305,6 +309,7 @@ export default function NurseRemindersView({
                     <strong>{warningModalReminder.medicamento}</strong> para el paciente{' '}
                     <strong>{warningModalReminder.pacienteNombre}</strong> ya figura como{' '}
                     <strong>ADMINISTRADA</strong>. Suministrar una dosis doble puede generar toxicidad.
+                    No se puede registrar otra vez esta dosis en el mismo recordatorio.
                   </>
                 ) : (
                   <>
@@ -327,20 +332,32 @@ export default function NurseRemindersView({
               </div>
 
               <div className="dialog-buttons">
-                <button
-                  type="button"
-                  className="action-btn action-btn--secondary"
-                  onClick={() => setWarningModalReminder(null)}
-                >
-                  Cancelar (Prevenir error)
-                </button>
-                <button
-                  type="button"
-                  className="action-btn action-btn--danger"
-                  onClick={confirmWarningAdministration}
-                >
-                  Confirmar bajo mi responsabilidad
-                </button>
+                {warningType === 'DUPLICATE' ? (
+                  <button
+                    type="button"
+                    className="action-btn action-btn--secondary"
+                    onClick={() => setWarningModalReminder(null)}
+                  >
+                    Cerrar advertencia
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="action-btn action-btn--secondary"
+                      onClick={() => setWarningModalReminder(null)}
+                    >
+                      Cancelar (Prevenir error)
+                    </button>
+                    <button
+                      type="button"
+                      className="action-btn action-btn--danger"
+                      onClick={confirmWarningAdministration}
+                    >
+                      Confirmar bajo mi responsabilidad
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -46,12 +46,31 @@ python -m services.coordination.app
 
 La referencia completa de endpoints, request/response y autenticación está en `../docs/openapi.json`. Swagger UI se publica en `/api/docs` en el servicio de identidad. Todos los endpoints de negocio aceptan el contrato existente `/api/*`; los códigos de confirmación de edición/eliminación viajan en `X-Registration-Code`.
 
-Los SQL se ejecutan con parámetros; no registrar credenciales, tokens ni datos clínicos. El login bloquea temporalmente una cuenta o una IP con cinco fallos en una ventana de 15 minutos. Los identificadores usados para limitar intentos se almacenan como hashes.
+Los SQL se ejecutan con parámetros; no registrar credenciales, tokens ni datos clínicos. El login
+bloquea temporalmente una cuenta o una IP con cinco fallos por cuenta o veinte por IP en una ventana
+de 15 minutos. Los identificadores usados para limitar intentos se almacenan como hashes. Para
+actualizar una base existente, ejecutar `../db/migrations/004_login_throttle.sql` después de hacer
+una copia de seguridad.
 
-Los servicios implementan Application Factory (`common/app.py`), políticas de acceso mediante Strategy (`common/access.py`) y notificaciones transaccionales mediante Observer (`common/events.py`). La prueba del flujo TLS/Wireshark está documentada en `../docs/wireshark-lab.md`; no se incluyen capturas simuladas.
+Las solicitudes autenticadas generan un registro de auditoría mínimo con actor, rol, endpoint,
+método y estado HTTP. No se guardan headers, parámetros, cuerpos de solicitud ni información clínica.
+
+Los servicios implementan Application Factory (`common/app.py`), políticas de acceso mediante
+Strategy (`common/access.py`) y notificaciones transaccionales mediante Observer (`common/events.py`).
+La prueba del flujo TLS/Wireshark está documentada en `../docs/wireshark-lab.md`; las capturas deben
+usar solo datos ficticios y no deben mostrar credenciales, tokens ni información clínica real.
 
 ## Pruebas
 
-Desde la raíz, `npm test` ejecuta la suite heredada, pruebas de unidad y HTTP de Flask, y tests del cliente React. Las pruebas Flask no necesitan credenciales ni una base activa; las pruebas de integración con MySQL deben ejecutarse contra una base ficticia aislada.
+Desde la raíz, `npm test` ejecuta la suite heredada, pruebas unitarias y HTTP de Flask, React Testing
+Library y Playwright. Las pruebas Flask unitarias no necesitan credenciales ni una base activa. Las
+dos pruebas E2E con persistencia requieren `PEDIACARE_E2E=1` y una base MySQL ficticia cuyo nombre
+termine en `_test`; si se omite la configuración, pytest las marca como omitidas.
+
+Instalar Chromium para Playwright una vez desde la raíz:
+
+```powershell
+npm exec --prefix frontend -- playwright install chromium
+```
 
 `src/` y `test/` son el backend Express anterior. Se conservan para comparar comportamiento y ejecutar pruebas de regresión; no se inician desde `npm run dev`.

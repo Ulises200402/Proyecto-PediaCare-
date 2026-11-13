@@ -1,0 +1,404 @@
+# Tasks-to-Implementation Traceability Checkpoint
+metadata:
+  generated: "2026-11-13"
+  source_tasks: ".github/modernize/requisitos-pdf/plan.md"
+  last_updated: "2026-11-13"
+
+summary:
+  total_tasks: 14
+  completed_tasks: 13
+  in_progress_tasks: 0
+  pending_tasks: 0
+  blocked_tasks: 1
+  completion_percentage: 92.86
+
+tasks:
+  - task_id: "T001"
+    description: "Add Vitest, React Testing Library, jsdom, and test setup."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "frontend/package.json"
+          changes: ["Added component and browser test scripts and dependencies."]
+        - file: "frontend/vite.config.js"
+          changes: ["Configured jsdom and the shared test setup."]
+        - file: "frontend/src/test-setup.js"
+          changes: ["Added testing-library cleanup and matchers."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "npm test"
+        passed: 4
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "Four Vitest tests passed."
+    upstream_trace:
+      plan_item: "1.1"
+      requirements: ["REQ-005", "REQ-007"]
+      full_trace: "REQ-005, REQ-007 -> Phase-1.1 -> T001 -> frontend test configuration"
+  - task_id: "T002"
+    description: "Add Playwright configuration and integrate browser tests into root npm test."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "frontend/playwright.config.js"
+          changes: ["Configured the Vite test server and Chromium."]
+        - file: "frontend/e2e/register.spec.js"
+          changes: ["Added registration role and invalid-password browser flows."]
+        - file: "frontend/package.json"
+          changes: ["Wired browser tests into the frontend test command."]
+        - file: ".gitignore"
+          changes: ["Ignored generated Playwright output."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "npm test"
+        passed: 2
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "Both Playwright browser tests passed."
+    upstream_trace:
+      plan_item: "1.1"
+      requirements: ["REQ-005", "REQ-007"]
+      full_trace: "REQ-005, REQ-007 -> Phase-1.1 -> T002 -> Playwright browser flows"
+  - task_id: "T003"
+    description: "Add login_throttle to the fresh-install SQL schema."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "db/pedia_care.sql"
+          changes: ["Added the hashed-scope throttle table and indexes."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "SQL schema review; no MySQL instance available"
+        passed: 0
+        failed: 0
+        skipped: 1
+        failures: []
+      notes: "Schema execution against MySQL remains unverified."
+    upstream_trace:
+      plan_item: "2.1"
+      requirements: ["REQ-001"]
+      full_trace: "REQ-001 -> Phase-2.1 -> T003 -> db/pedia_care.sql"
+  - task_id: "T004"
+    description: "Create an idempotent login_throttle migration."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "db/migrations/004_login_throttle.sql"
+          changes: ["Added CREATE TABLE IF NOT EXISTS for existing installs."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "SQL migration review; no MySQL instance available"
+        passed: 0
+        failed: 0
+        skipped: 1
+        failures: []
+      notes: "Migration execution and repeatability remain unverified against MySQL."
+    upstream_trace:
+      plan_item: "2.1"
+      requirements: ["REQ-002"]
+      full_trace: "REQ-002 -> Phase-2.1 -> T004 -> db/migrations/004_login_throttle.sql"
+  - task_id: "T005"
+    description: "Add focused login-throttle unit tests."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "backend/tests/test_login_throttle.py"
+          changes: ["Added lockout, hashed scope, failure recording, and reset tests."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "python -m pytest backend/tests"
+        passed: 2
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "Both focused throttle tests passed."
+    upstream_trace:
+      plan_item: "2.2"
+      requirements: ["REQ-003", "REQ-006"]
+      full_trace: "REQ-003, REQ-006 -> Phase-2.2 -> T005 -> backend/tests/test_login_throttle.py"
+  - task_id: "T006"
+    description: "Add privacy-safe authenticated request audit logging."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "backend/services/common/app.py"
+          changes: ["Logged actor, role, endpoint, method, and status without request data."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "python -m pytest backend/tests"
+        passed: 16
+        failed: 0
+        skipped: 2
+        failures: []
+      notes: "All runnable Flask tests passed; the two skips require MySQL E2E."
+    upstream_trace:
+      plan_item: "3.1"
+      requirements: ["REQ-004"]
+      full_trace: "REQ-004 -> Phase-3.1 -> T006 -> backend/services/common/app.py"
+  - task_id: "T007"
+    description: "Add role allow/deny and audit privacy regression tests."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "backend/tests/test_shared_patterns.py"
+          changes: ["Asserted audit content is useful and excludes sensitive values."]
+        - file: "backend/tests/test_service_endpoints.py"
+          changes: ["Added role authorization allow/deny coverage."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "python -m pytest backend/tests"
+        passed: 16
+        failed: 0
+        skipped: 2
+        failures: []
+      notes: "All runnable Flask tests passed."
+    upstream_trace:
+      plan_item: "3.2"
+      requirements: ["REQ-004", "REQ-006"]
+      full_trace: "REQ-004, REQ-006 -> Phase-3.2 -> T007 -> Flask regression tests"
+  - task_id: "T008"
+    description: "Add guarded MySQL E2E fixtures and identity API flows."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "backend/tests/test_api_e2e.py"
+          changes: ["Added opt-in fictitious registration/login/identity and duplicate-registration flows."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "python -m pytest backend/tests/test_api_e2e.py"
+        passed: 0
+        failed: 0
+        skipped: 2
+        failures: []
+      notes: "Flows were not run because MySQL is unavailable; invalid non-_test database was confirmed to fail before connecting."
+    upstream_trace:
+      plan_item: "4.1"
+      requirements: ["REQ-005", "REQ-006"]
+      full_trace: "REQ-005, REQ-006 -> Phase-4.1 -> T008 -> backend/tests/test_api_e2e.py"
+  - task_id: "T009"
+    description: "Add React Testing Library registration tests."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "frontend/src/components/RegisterPage.test.jsx"
+          changes: ["Covered role-specific fields and password mismatch feedback."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "npm test"
+        passed: 4
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "All four Vitest tests passed."
+    upstream_trace:
+      plan_item: "4.2"
+      requirements: ["REQ-005", "REQ-007"]
+      full_trace: "REQ-005, REQ-007 -> Phase-4.2 -> T009 -> frontend/src/components/RegisterPage.test.jsx"
+  - task_id: "T010"
+    description: "Add Playwright registration browser flows."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "frontend/e2e/register.spec.js"
+          changes: ["Covered role-dependent UI and invalid password feedback with intercepted API calls."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "npm test"
+        passed: 2
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "Both Playwright browser tests passed."
+    upstream_trace:
+      plan_item: "4.2"
+      requirements: ["REQ-005", "REQ-007"]
+      full_trace: "REQ-005, REQ-007 -> Phase-4.2 -> T010 -> frontend/e2e/register.spec.js"
+  - task_id: "T011"
+    description: "Update project and backend documentation."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "README.md"
+          changes: ["Documented use case, services, roles, patterns, exceptions, and evidence."]
+        - file: "backend/README.md"
+          changes: ["Documented login throttle migration, audit behavior, and test commands."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "Documentation review"
+        passed: 1
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "Documentation-only validation."
+    upstream_trace:
+      plan_item: "5.1"
+      requirements: ["REQ-008", "REQ-009"]
+      full_trace: "REQ-008, REQ-009 -> Phase-5.1 -> T011 -> README.md and backend/README.md"
+  - task_id: "T012"
+    description: "Create the safe Wireshark lab and verified TLS capture."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: "docs/wireshark-lab.md"
+          changes: ["Added fictitious-data capture procedure and protocol interpretation."]
+        - file: "docs/pedia-care-tls-api-ficticia.pcapng"
+          changes: ["Added a local capture verified from metadata as TLS-only on the filtered port."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "Capture metadata inspection"
+        passed: 1
+        failed: 0
+        skipped: 0
+        failures: []
+      notes: "No packet payloads from the existing capture were inspected."
+    upstream_trace:
+      plan_item: "5.2"
+      requirements: ["REQ-010"]
+      full_trace: "REQ-010 -> Phase-5.2 -> T012 -> docs/wireshark-lab.md and TLS capture"
+  - task_id: "T013"
+    description: "Run repository tests, build, lint, syntax, and startup checks."
+    status: "completed"
+    implementation:
+      files_changed:
+        - file: ".github/modernize/requisitos-pdf/plan.md"
+          changes: ["Recorded task completion and database blocker."]
+        - file: ".github/modernize/requisitos-pdf/requirements-checklist.md"
+          changes: ["Recorded test counts and validation gaps."]
+        - file: ".github/modernize/requisitos-pdf/runtime-validation-report.md"
+          changes: ["Recorded runtime evidence and verdict."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "npm test; npm run build; npm run lint; python -m compileall -q backend; git diff --check"
+        passed: 48
+        failed: 0
+        skipped: 2
+        failures: []
+      notes: "48 tests passed across Node, pytest, Vitest, and Playwright; 2 MySQL tests skipped. Build, lint, compile, and diff checks exited 0."
+    upstream_trace:
+      plan_item: "6.1"
+      requirements: ["REQ-001", "REQ-002", "REQ-003", "REQ-004", "REQ-005", "REQ-006", "REQ-007", "REQ-008", "REQ-009", "REQ-010"]
+      full_trace: "REQ-001..REQ-010 -> Phase-6.1 -> T013 -> runtime-validation-report.md"
+  - task_id: "T014"
+    description: "Run MySQL E2E flows against an isolated _test database."
+    status: "blocked"
+    implementation:
+      files_changed:
+        - file: ".github/modernize/requisitos-pdf/plan.md"
+          changes: ["Recorded that only the live MySQL execution remains blocked; TLS evidence is already complete."]
+    verification:
+      build_passed: true
+      test_results:
+        command: "MySQL-backed E2E"
+        passed: 0
+        failed: 0
+        skipped: 2
+        failures: []
+      notes: "No Docker CLI or MySQL listener on ports 3306/3307; do not connect to a non-test database."
+    upstream_trace:
+      plan_item: "6.1"
+      requirements: ["REQ-001", "REQ-002", "REQ-005", "REQ-006"]
+      full_trace: "REQ-001, REQ-002, REQ-005, REQ-006 -> Phase-6.1 -> T014 -> live MySQL E2E unverified"
+
+pending_tasks:
+  - task_id: "T014"
+    description: "Run the guarded MySQL E2E and migration verification against an isolated test database."
+    blocked_by: []
+    priority: "P1"
+    reason: "No local MySQL/MariaDB service or Docker CLI is available."
+
+untracked_changes: []
+
+traceability_chain:
+  - chain_id: "TRACE-001"
+    requirement: "REQ-001"
+    plan_phase: "Phase-2"
+    plan_item: "2.1"
+    tasks: ["T003", "T014"]
+    files: ["db/pedia_care.sql"]
+    status: "partial"
+  - chain_id: "TRACE-002"
+    requirement: "REQ-002"
+    plan_phase: "Phase-2"
+    plan_item: "2.1"
+    tasks: ["T004", "T014"]
+    files: ["db/migrations/004_login_throttle.sql"]
+    status: "partial"
+  - chain_id: "TRACE-003"
+    requirement: "REQ-003"
+    plan_phase: "Phase-2"
+    plan_item: "2.2"
+    tasks: ["T005"]
+    files: ["backend/tests/test_login_throttle.py"]
+    status: "complete"
+  - chain_id: "TRACE-004"
+    requirement: "REQ-004"
+    plan_phase: "Phase-3"
+    plan_item: "3.1, 3.2"
+    tasks: ["T006", "T007"]
+    files: ["backend/services/common/app.py", "backend/tests/test_shared_patterns.py", "backend/tests/test_service_endpoints.py"]
+    status: "complete"
+  - chain_id: "TRACE-005"
+    requirement: "REQ-005"
+    plan_phase: "Phase-4"
+    plan_item: "4.1, 4.2"
+    tasks: ["T008", "T009", "T010", "T014"]
+    files: ["backend/tests/test_api_e2e.py", "frontend/src/components/RegisterPage.test.jsx", "frontend/e2e/register.spec.js"]
+    status: "partial"
+  - chain_id: "TRACE-006"
+    requirement: "REQ-006"
+    plan_phase: "Phase-2, Phase-3, Phase-4"
+    plan_item: "2.2, 3.2, 4.1"
+    tasks: ["T005", "T007", "T008", "T014"]
+    files: ["backend/tests/test_login_throttle.py", "backend/tests/test_service_endpoints.py", "backend/tests/test_api_e2e.py"]
+    status: "partial"
+  - chain_id: "TRACE-007"
+    requirement: "REQ-007"
+    plan_phase: "Phase-1, Phase-4"
+    plan_item: "1.1, 4.2"
+    tasks: ["T001", "T002", "T009", "T010"]
+    files: ["frontend/src/components/RegisterPage.test.jsx", "frontend/e2e/register.spec.js"]
+    status: "complete"
+  - chain_id: "TRACE-008"
+    requirement: "REQ-008"
+    plan_phase: "Phase-5"
+    plan_item: "5.1"
+    tasks: ["T011"]
+    files: ["README.md", "backend/README.md"]
+    status: "complete"
+  - chain_id: "TRACE-009"
+    requirement: "REQ-009"
+    plan_phase: "Phase-5"
+    plan_item: "5.1"
+    tasks: ["T011"]
+    files: ["README.md"]
+    status: "complete"
+  - chain_id: "TRACE-010"
+    requirement: "REQ-010"
+    plan_phase: "Phase-5"
+    plan_item: "5.2"
+    tasks: ["T012"]
+    files: ["docs/wireshark-lab.md", "docs/pedia-care-tls-api-ficticia.pcapng"]
+    status: "complete"
+
+validation:
+  passed: false
+  errors: []
+  warnings:
+    - "npm run lint exits 0 but reports a pre-existing Date.now purity warning."
+  blocking_issues:
+    - "Live MySQL E2E and schema-migration execution remain unverified because no isolated MySQL test service is available."

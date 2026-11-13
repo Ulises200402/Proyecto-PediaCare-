@@ -149,6 +149,7 @@ export default function AuthenticatedDashboard({
 }) {
   const currentRole = user?.role || 'MEDICO'
   const profile = roleProfiles[currentRole] || roleProfiles.MEDICO
+  const canViewEmergencyProfile = currentRole !== 'PADRE_MADRE'
 
   const [activeTab, setActiveTab] = useState('Resumen')
   const [actionError, setActionError] = useState('')
@@ -912,18 +913,19 @@ export default function AuthenticatedDashboard({
           })}
         </nav>
 
-        {/* Acceso directo permanente a Información Crítica / Ficha de Emergencia (HU 3) */}
-        <div className="workspace-sidebar__emergency-trigger">
-          <button
-            type="button"
-            className="sidebar-emergency-btn emergency-full-btn"
-            onClick={() => openEmergency()}
-            title="Abrir Perfil Crítico de Emergencia (HU 3)"
-          >
-            <ShieldAlert size={18} />
-            <span>Ficha de Emergencia</span>
-          </button>
-        </div>
+        {canViewEmergencyProfile && (
+          <div className="workspace-sidebar__emergency-trigger">
+            <button
+              type="button"
+              className="sidebar-emergency-btn emergency-full-btn"
+              onClick={() => openEmergency()}
+              title="Abrir Perfil Crítico de Emergencia (HU 3)"
+            >
+              <ShieldAlert size={18} />
+              <span>Ficha de Emergencia</span>
+            </button>
+          </div>
+        )}
 
         <div className="workspace-sidebar__bottom">
           <span className="workspace-sidebar__demo-mark">P+</span>
@@ -956,15 +958,16 @@ export default function AuthenticatedDashboard({
           </div>
 
           <div className="workspace-topbar__actions">
-            {/* Botón de Emergencia visible en la cabecera (HU 3: acceso en menos de 3 seg) */}
-            <button
-              type="button"
-              className="topbar-emergency-pill"
-              onClick={() => openEmergency()}
-            >
-              <ShieldAlert size={16} />
-              <span>Emergencia</span>
-            </button>
+            {canViewEmergencyProfile && (
+              <button
+                type="button"
+                className="topbar-emergency-pill"
+                onClick={() => openEmergency()}
+              >
+                <ShieldAlert size={16} />
+                <span>Emergencia</span>
+              </button>
+            )}
 
             {/* Switcher de Roles si está en modo demostración */}
             {isDemo && onChangeDemoRole && (
@@ -1492,15 +1495,16 @@ export default function AuthenticatedDashboard({
           })}
         </nav>
 
-      {/* Modal Universal de Emergencia (HU 3) */}
-      <EmergencyProfileModal
-        key={emergencyTargetPatientId ?? 'all'}
-        isOpen={isEmergencyModalOpen}
-        onClose={() => setIsEmergencyModalOpen(false)}
-        patients={patients}
-        medications={medications}
-        initialPatientId={emergencyTargetPatientId}
-      />
+      {canViewEmergencyProfile && (
+        <EmergencyProfileModal
+          key={emergencyTargetPatientId ?? 'all'}
+          isOpen={isEmergencyModalOpen}
+          onClose={() => setIsEmergencyModalOpen(false)}
+          patients={patients}
+          medications={medications}
+          initialPatientId={emergencyTargetPatientId}
+        />
+      )}
     </div>
   )
 }

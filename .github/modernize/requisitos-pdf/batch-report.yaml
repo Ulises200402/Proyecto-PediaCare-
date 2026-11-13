@@ -1,0 +1,226 @@
+batch_id: "B01"
+completed_tasks: ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013"]
+blocked_tasks:
+  - task_id: "T014"
+    reason: "No local MySQL/MariaDB service or Docker CLI is available; ports 3306 and 3307 are unreachable."
+    required_task_ids: []
+endpoint_probes:
+  - method: GET
+    path: /
+    status: 200
+    result: PASS
+  - method: GET
+    path: /api/openapi.json
+    status: 200
+    result: PASS
+    notes: "Verified directly on Flask ports 3001, 3002, 3003 and through the Vite proxy."
+files_changed:
+  T001:
+    - file: "frontend/package.json"
+      change_type: "modified"
+      description: "Added React Testing Library, jsdom, and Vitest scripts/dependencies."
+    - file: "frontend/vite.config.js"
+      change_type: "modified"
+      description: "Configured jsdom and test setup."
+    - file: "frontend/src/test-setup.js"
+      change_type: "created"
+      description: "Added testing-library setup and cleanup."
+  T002:
+    - file: "frontend/playwright.config.js"
+      change_type: "created"
+      description: "Configured local Vite test server and Chromium."
+    - file: "frontend/e2e/register.spec.js"
+      change_type: "created"
+      description: "Added browser-level registration tests."
+    - file: "frontend/package-lock.json"
+      change_type: "modified"
+      description: "Locked frontend test dependencies."
+    - file: ".gitignore"
+      change_type: "modified"
+      description: "Ignored generated Playwright output."
+  T003:
+    - file: "db/pedia_care.sql"
+      change_type: "modified"
+      description: "Added the login_throttle table to the fresh-install schema."
+  T004:
+    - file: "db/migrations/004_login_throttle.sql"
+      change_type: "created"
+      description: "Added an idempotent migration for existing databases."
+  T005:
+    - file: "backend/tests/test_login_throttle.py"
+      change_type: "created"
+      description: "Added login lockout regression tests."
+  T006:
+    - file: "backend/services/common/app.py"
+      change_type: "modified"
+      description: "Added minimal audit logging for authenticated API requests."
+  T007:
+    - file: "backend/tests/test_shared_patterns.py"
+      change_type: "modified"
+      description: "Added audit-log privacy assertions."
+    - file: "backend/tests/test_service_endpoints.py"
+      change_type: "modified"
+      description: "Added role allow/deny regression coverage."
+  T008:
+    - file: "backend/tests/test_api_e2e.py"
+      change_type: "created"
+      description: "Added guarded MySQL registration and duplicate-registration flows."
+  T009:
+    - file: "frontend/src/components/RegisterPage.test.jsx"
+      change_type: "created"
+      description: "Added role-specific field and invalid-feedback component tests."
+  T010:
+    - file: "frontend/e2e/register.spec.js"
+      change_type: "created"
+      description: "Added Playwright flows with API traffic intercepted."
+  T011:
+    - file: "README.md"
+      change_type: "modified"
+      description: "Documented project need, services, permissions, patterns, and approved exceptions."
+    - file: "backend/README.md"
+      change_type: "modified"
+      description: "Documented migration, audit behavior, and backend validation."
+  T012:
+    - file: "docs/wireshark-lab.md"
+      change_type: "created"
+      description: "Added a safe fictitious-data TLS capture procedure."
+    - file: "docs/pedia-care-tls-api-ficticia.pcapng"
+      change_type: "created"
+      description: "Added verified local TLS-only capture evidence."
+  T013:
+    - file: ".github/modernize/requisitos-pdf/plan.md"
+      change_type: "modified"
+      description: "Marked completed work and documented the remaining MySQL blocker."
+    - file: ".github/modernize/requisitos-pdf/requirements-checklist.md"
+      change_type: "modified"
+      description: "Recorded validation results and outstanding live-database verification."
+    - file: ".github/modernize/requisitos-pdf/runtime-validation-report.md"
+      change_type: "created"
+      description: "Recorded runtime, test, build, and environment evidence."
+    - file: ".github/modernize/requisitos-pdf/checkpoints/tasks-to-impl.yaml"
+      change_type: "created"
+      description: "Recorded task-to-implementation traceability."
+    - file: ".github/modernize/requisitos-pdf/batch-report.yaml"
+      change_type: "created"
+      description: "Recorded batch implementation outcomes."
+upstream_artifacts_consumed:
+  T001:
+    - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-005,REQ-007"
+      used_for: "Frontend test scope."
+    - artifact: ".github/modernize/requisitos-pdf/plan.md#1.1"
+      used_for: "Test setup and canonical command requirements."
+  T003:
+    - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-001"
+      used_for: "Required throttle table shape."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#I"
+      used_for: "Additive, non-destructive schema change."
+  T006:
+    - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-004"
+      used_for: "Required audit fields and exclusions."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#II"
+      used_for: "Privacy constraints for logs."
+  T008:
+    - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-005"
+      used_for: "Two isolated, fictitious-data MySQL E2E flows."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#III"
+      used_for: "Explicit opt-in and test-database guard."
+  T011:
+    - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-008,REQ-009"
+      used_for: "Documentation scope and approved deviations."
+  T012:
+    - artifact: ".github/modernize/requisitos-pdf/spec.md#REQ-010"
+      used_for: "Safe TLS capture requirements."
+    - artifact: ".github/modernize/requisitos-pdf/constitution.md#Additional Constraints"
+      used_for: "Fictitious data and no credential exposure."
+evidence_mapping:
+  T001:
+    - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-007"
+      output: "frontend/src/components/RegisterPage.test.jsx"
+      evidence: "Four Vitest tests passed."
+  T006:
+    - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-004"
+      output: "backend/services/common/app.py"
+      evidence: "Audit privacy tests passed in pytest."
+  T008:
+    - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-005"
+      output: "backend/tests/test_api_e2e.py"
+      evidence: "Two test flows were created; both are skipped without opt-in MySQL. Invalid non-_test database was rejected before connecting."
+  T010:
+    - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-007"
+      output: "frontend/e2e/register.spec.js"
+      evidence: "Two Playwright tests passed."
+  T012:
+    - upstream: ".github/modernize/requisitos-pdf/spec.md#REQ-010"
+      output: "docs/pedia-care-tls-api-ficticia.pcapng"
+      evidence: "Metadata verified 8 TLS packets and 0 HTTP packets on the capture filter."
+traceability:
+  - requirement: "REQ-001"
+    plan_item: "2.1"
+    task: "T003"
+    files: ["db/pedia_care.sql"]
+    status: "partial"
+  - requirement: "REQ-002"
+    plan_item: "2.1"
+    task: "T004"
+    files: ["db/migrations/004_login_throttle.sql"]
+    status: "partial"
+  - requirement: "REQ-003"
+    plan_item: "2.2"
+    task: "T005"
+    files: ["backend/tests/test_login_throttle.py"]
+    status: "completed"
+  - requirement: "REQ-004"
+    plan_item: "3.1, 3.2"
+    task: "T006, T007"
+    files: ["backend/services/common/app.py", "backend/tests/test_shared_patterns.py", "backend/tests/test_service_endpoints.py"]
+    status: "completed"
+  - requirement: "REQ-005"
+    plan_item: "4.1, 4.2"
+    task: "T008, T009, T010"
+    files: ["backend/tests/test_api_e2e.py", "frontend/src/components/RegisterPage.test.jsx", "frontend/e2e/register.spec.js"]
+    status: "partial"
+  - requirement: "REQ-006"
+    plan_item: "2.2, 3.2, 4.1"
+    task: "T005, T007, T008"
+    files: ["backend/tests/test_login_throttle.py", "backend/tests/test_service_endpoints.py", "backend/tests/test_api_e2e.py"]
+    status: "partial"
+  - requirement: "REQ-007"
+    plan_item: "1.1, 4.2"
+    task: "T001, T002, T009, T010"
+    files: ["frontend/src/components/RegisterPage.test.jsx", "frontend/e2e/register.spec.js"]
+    status: "completed"
+  - requirement: "REQ-008"
+    plan_item: "5.1"
+    task: "T011"
+    files: ["README.md", "backend/README.md"]
+    status: "completed"
+  - requirement: "REQ-009"
+    plan_item: "5.1"
+    task: "T011"
+    files: ["README.md"]
+    status: "completed"
+  - requirement: "REQ-010"
+    plan_item: "5.2"
+    task: "T012"
+    files: ["docs/wireshark-lab.md", "docs/pedia-care-tls-api-ficticia.pcapng"]
+    status: "completed"
+protocol_violation: false
+errors: []
+warnings:
+  - severity: LOW
+    message: "npm run lint exits 0 with one pre-existing Date.now purity warning."
+  - severity: MEDIUM
+    message: "MySQL-backed E2E and live schema migration behavior are unverified because no isolated MySQL service is available."
+test_results:
+  T013:
+    command: "npm test"
+    passed: 48
+    failed: 0
+    skipped: 2
+    failures: []
+  T014:
+    command: "python -m pytest backend/tests/test_api_e2e.py"
+    passed: 0
+    failed: 0
+    skipped: 2
+    failures: []
