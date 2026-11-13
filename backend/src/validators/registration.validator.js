@@ -19,8 +19,8 @@ export function validateRegistration(body) {
   if (!isValidDni(dni)) errors.push('dni debe contener 7 u 8 dígitos.')
   if (!emailPattern.test(email) || email.length > 254) errors.push('email no es válido.')
   const passwordLength = Buffer.byteLength(password, 'utf8')
-  if (passwordLength < 12 || passwordLength > 72) {
-    errors.push('La contraseña debe tener entre 12 y 72 bytes.')
+  if (passwordLength < 8 || passwordLength > 72) {
+    errors.push('La contraseña debe tener entre 8 y 72 bytes.')
   }
   if (!registrationRoles.has(role)) errors.push('role debe ser PADRE_MADRE, MEDICO o ENFERMERO.')
 

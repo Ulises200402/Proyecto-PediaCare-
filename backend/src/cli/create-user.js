@@ -96,10 +96,10 @@ async function createUser() {
     }
   }
 
-  const password = await promptInput('Contraseña (mínimo 12 caracteres, entrada oculta): ', { hidden: true })
+  const password = await promptInput('Contraseña (mínimo 8 caracteres, entrada oculta): ', { hidden: true })
   const confirmation = await promptInput('Repetir contraseña (entrada oculta): ', { hidden: true })
   if (password === null || confirmation === null) throw new Error('Creación cancelada.')
-  if (password.length < 12) throw new Error('La contraseña debe tener al menos 12 caracteres.')
+  if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.')
   if (password !== confirmation) throw new Error('Las contraseñas no coinciden.')
 
   const passwordHash = await bcrypt.hash(password, 12)

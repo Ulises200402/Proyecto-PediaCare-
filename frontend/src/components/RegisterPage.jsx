@@ -162,10 +162,10 @@ export default function RegisterPage({ onBackToLogin, onRegistered }) {
                 <input
                   id="register-password"
                   autoComplete="new-password"
-                  minLength="12"
+                  minLength="8"
                   maxLength="72"
                   name="password"
-                  placeholder="Mínimo 12 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   required
                   type={passwordVisible ? 'text' : 'password'}
                 />
@@ -183,7 +183,7 @@ export default function RegisterPage({ onBackToLogin, onRegistered }) {
               <label htmlFor="register-password-confirmation">Repetir contraseña</label>
               <div className="input-shell">
                 <LockKeyhole className="input-shell__icon" size={18} aria-hidden="true" />
-                <input id="register-password-confirmation" autoComplete="new-password" minLength="12" maxLength="72" name="passwordConfirmation" required type="password" />
+                <input id="register-password-confirmation" autoComplete="new-password" minLength="8" maxLength="72" name="passwordConfirmation" required type="password" />
               </div>
             </div>
 
