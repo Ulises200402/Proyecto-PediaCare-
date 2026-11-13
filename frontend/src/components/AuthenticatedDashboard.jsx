@@ -916,7 +916,7 @@ export default function AuthenticatedDashboard({
         <div className="workspace-sidebar__emergency-trigger">
           <button
             type="button"
-            className="sidebar-emergency-btn"
+            className="sidebar-emergency-btn emergency-full-btn"
             onClick={() => openEmergency()}
             title="Abrir Perfil Crítico de Emergencia (HU 3)"
           >
@@ -1160,7 +1160,7 @@ export default function AuthenticatedDashboard({
 
                         <button
                           type="button"
-                          className="sidebar-emergency-btn"
+                          className="sidebar-emergency-btn emergency-full-btn"
                           style={{ marginTop: '1rem', width: '100%' }}
                           onClick={() => openEmergency()}
                         >

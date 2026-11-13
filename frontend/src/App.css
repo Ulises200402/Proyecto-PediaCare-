@@ -2430,6 +2430,22 @@
   border-color: var(--coral);
 }
 
+.sidebar-emergency-btn.emergency-full-btn {
+  background: #B42318;
+  color: #FFFFFF;
+  border-color: #B42318;
+}
+
+.sidebar-emergency-btn.emergency-full-btn:hover {
+  background: #8F1B13;
+  border-color: #8F1B13;
+}
+
+.sidebar-emergency-btn.emergency-full-btn:focus-visible {
+  outline: 3px solid #B42318;
+  outline-offset: 3px;
+}
+
 .workspace-sidebar__emergency-trigger {
   padding: 12px 16px;
   margin-top: auto;
